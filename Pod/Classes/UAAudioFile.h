@@ -10,22 +10,25 @@
 #import <AudioToolbox/AudioToolbox.h>
 
 
-@interface UAAudioFile : NSObject 
-{
-	NSURL			*filePath;
-	NSDictionary	*fileInfoDict;
-}
+#define kUADictionaryTitle    @"title"
+#define kUADictionaryArtist   @"artist"
+#define kUADictionaryAlbum    @"album"
+#define kUADictionaryDuration @"duration"
+
+@interface UAAudioFile : NSObject
 
 @property (nonatomic, retain) NSURL *filePath;
 @property (nonatomic, retain) NSDictionary *fileInfoDict;
 @property (nonatomic, retain) UIImage *coverImage;
 
-- (UAAudioFile *)initWithPath:(NSURL *)path;
-- (NSDictionary *)songID3Tags;
+- (instancetype)initWithLocalFilePath:(NSURL *)path;
+- (instancetype)initWithRemoteFilePath:(NSURL *)path andInfoDict:(NSDictionary *)infoDict;
+
 - (NSString *)title;
 - (NSString *)artist;
 - (NSString *)album;
 - (float)duration;
+
 - (NSString *)durationInMinutes;
 
 @end

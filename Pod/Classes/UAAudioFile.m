@@ -14,12 +14,21 @@
 @synthesize fileInfoDict;
 @synthesize coverImage = _coverImage;
 
-- (UAAudioFile *)initWithPath:(NSURL *)path
-{
-	if (self = [super init]) 
-	{
+- (instancetype)initWithLocalFilePath:(NSURL *)path {
+	
+    if (self = [super init])  {
 		self.filePath = path;
 		self.fileInfoDict = [self songID3Tags];
+	}
+	
+	return self;
+}
+
+- (instancetype)initWithRemoteFilePath:(NSURL *)path andInfoDict:(NSDictionary *)infoDict {
+    
+    if (self = [super init]) {
+		self.filePath = path;
+		self.fileInfoDict = infoDict;
 	}
 	
 	return self;
@@ -90,14 +99,20 @@
         NSLog(@"AudioFileGetProperty failed for property info dictionary");
 	
 	free(rawID3Tag);
+    
+    NSMutableDictionary * dictionary  = [NSMutableDictionary dictionary];
+    dictionary[kUADictionaryTitle]    = [(__bridge NSDictionary*)piDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_Title]];
+    dictionary[kUADictionaryArtist]   = [(__bridge NSDictionary*)piDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_Artist]];
+    dictionary[kUADictionaryAlbum]    = [(__bridge NSDictionary*)piDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_Album]];
+    dictionary[kUADictionaryDuration] = [(__bridge NSDictionary*)piDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_ApproximateDurationInSeconds]];
 	
-	return (__bridge NSDictionary*)piDict;
+	return dictionary;
 }
 
 - (NSString *)title
 {
-	if ([fileInfoDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_Title]]) {
-		return [fileInfoDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_Title]];
+	if ([self.fileInfoDict objectForKey:kUADictionaryTitle]) {
+		return [self.fileInfoDict objectForKey:kUADictionaryTitle];
 	}
 	
 	else {
@@ -111,24 +126,24 @@
 
 - (NSString *)artist
 {
-	if ([fileInfoDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_Artist]])
-		return [fileInfoDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_Artist]];
+	if ([self.fileInfoDict objectForKey:kUADictionaryArtist])
+		return [self.fileInfoDict objectForKey:kUADictionaryArtist];
 	else
 		return @"";
 }
 
 - (NSString *)album
 {
-	if ([fileInfoDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_Album]])
-		return [fileInfoDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_Album]];
+	if ([self.fileInfoDict objectForKey:kUADictionaryAlbum])
+		return [self.fileInfoDict objectForKey:kUADictionaryAlbum];
 	else
 		return @"";
 }
 
 - (float)duration
 {
-	if ([fileInfoDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_ApproximateDurationInSeconds]])
-		return [[fileInfoDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_ApproximateDurationInSeconds]] floatValue];
+	if ([self.fileInfoDict objectForKey:kUADictionaryAlbum])
+		return [[self.fileInfoDict objectForKey:kUADictionaryAlbum] floatValue];
 	else
 		return 0;
 }

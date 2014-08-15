@@ -137,7 +137,7 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 	
 	if (![songTableView superview])
 	{
-        NSLog(@"%s: %@ %u",__func__,artworkView,artworkView.state);
+        NSLog(@"%s: %@ %lu",__func__,artworkView,artworkView.state);
         [self.artworkView setImage:nil forState:UIControlStateNormal];
         UIImage *coverImage = [[soundFiles objectAtIndex:selectedIndex] coverImage];
 		[self.artworkView setImage:coverImage forState:UIControlStateNormal];
@@ -176,7 +176,7 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 {
     float playerDuration = self.player.currentItem.duration.value / self.player.currentItem.duration.timescale;
 	itemDuration.text = [NSString stringWithFormat:@"%d:%02d", (int)playerDuration / 60, (int)playerDuration % 60, nil];
-	indexLabel.text = [NSString stringWithFormat:@"%d of %d", (selectedIndex + 1), [soundFiles count]];
+	indexLabel.text = [NSString stringWithFormat:@"%lu of %lu", (selectedIndex + 1), (unsigned long)[soundFiles count]];
     self.progressSlider.minimumValue = 0.0f;
 	self.progressSlider.maximumValue = playerDuration;
 }
@@ -253,6 +253,9 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 	
     if ([self respondsToSelector:@selector(setNeedsStatusBarAppearanceUpdate)])  [self setNeedsStatusBarAppearanceUpdate];
     
+    // Set itself as the first responder
+    [self becomeFirstResponder];
+    
     self.edgesForExtendedLayout = UIRectEdgeNone;
     self.extendedLayoutIncludesOpaqueBars = NO;
     self.automaticallyAdjustsScrollViewInsets = NO;
@@ -265,9 +268,6 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
     bottomBorder.backgroundColor = [UIColor colorWithWhite:0.8f alpha:1.0f].CGColor;
     [self.containerView.layer addSublayer:bottomBorder];
     
-    
-    // Set itself as the first responder
-    [self becomeFirstResponder];
     
 	updateTimer = nil;
     
@@ -288,7 +288,10 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 	AudioSessionSetProperty(kAudioSessionProperty_AudioCategory, sizeof(sessionCategory), &sessionCategory);
 	
 	UAAudioFile *selectedSong = [self.soundFiles objectAtIndex:selectedIndex];
-	self.title = [NSString stringWithFormat:@"%i of %i", selectedIndex + 1, self.soundFiles.count];
+	self.title = [NSString stringWithFormat:@"%lu of %lu", selectedIndex + 1, (unsigned long)self.soundFiles.count];
+    
+    self.marqueeLabel.marqueeType = MLContinuous;
+    self.marqueeLabel.rate = 50.0f;
     
 	itemDuration.adjustsFontSizeToFitWidth = YES;
 	currentTime.adjustsFontSizeToFitWidth = YES;
