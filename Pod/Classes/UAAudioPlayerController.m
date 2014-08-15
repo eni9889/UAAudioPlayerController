@@ -268,12 +268,7 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
     bottomBorder.backgroundColor = [UIColor colorWithWhite:0.8f alpha:1.0f].CGColor;
     [self.containerView.layer addSublayer:bottomBorder];
     
-    
 	updateTimer = nil;
-    
-	float navOriginY = 20.0f;
-    if ([self modalPresentationStyle] == UIModalPresentationFormSheet) navOriginY = 0.0f;
-	
 	
 	self.toggleButton = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 30, 30)];
 	[toggleButton setImage:[UIImage imageNamed:@"player-playlist"] forState:UIControlStateNormal];
@@ -291,6 +286,8 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 	self.title = [NSString stringWithFormat:@"%lu of %lu", selectedIndex + 1, (unsigned long)self.soundFiles.count];
     
     self.marqueeLabel.marqueeType = MLContinuous;
+    self.marqueeLabel.animationDelay = 0.0f;
+    self.marqueeLabel.fadeLength = 10.0f;
     self.marqueeLabel.rate = 50.0f;
     
 	itemDuration.adjustsFontSizeToFitWidth = YES;
