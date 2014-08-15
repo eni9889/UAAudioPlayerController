@@ -7,6 +7,8 @@
 //
 
 #import "UAViewController.h"
+#import "UAAudioFile.h"
+#import "UAAudioPlayerController.h"
 
 @interface UAViewController ()
 
@@ -18,6 +20,9 @@
 {
     [super viewDidLoad];
 	// Do any additional setup after loading the view, typically from a nib.
+    UAAudioPlayerController *audioPlayer = [[UAAudioPlayerController alloc] initWithSoundFiles:nil
+                                                                                        atPath:[[NSBundle mainBundle] bundlePath] andSelectedIndex:0];
+	[self.navigationController pushViewController:audioPlayer animated:YES];
 }
 
 - (void)didReceiveMemoryWarning
