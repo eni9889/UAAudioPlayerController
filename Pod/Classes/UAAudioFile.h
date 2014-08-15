@@ -22,7 +22,13 @@
 @property (nonatomic, retain) UIImage *coverImage;
 
 - (instancetype)initWithLocalFilePath:(NSURL *)path;
-- (instancetype)initWithRemoteFilePath:(NSURL *)path andInfoDict:(NSDictionary *)infoDict;
+- (instancetype)initWithRemoteFilePath:(NSURL *)path
+                           andInfoDict:(NSDictionary *)infoDict;
+- (instancetype)initWithRemoteFilePath:(NSURL *)path
+                                 title:(NSString *)title
+                                artist:(NSString *)artist
+                                 album:(NSString *)album
+                              duration:(NSNumber *)duration;
 
 - (NSString *)title;
 - (NSString *)artist;

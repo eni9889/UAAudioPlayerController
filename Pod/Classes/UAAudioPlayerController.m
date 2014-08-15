@@ -101,10 +101,8 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 }
 
 - (void)updateCurrentTime {
+        
     NSString *current = [NSString stringWithFormat:@"%d:%02d", (int) (self.player.currentTime.value/self.player.currentTime.timescale) / 60, (int) (self.player.currentTime.value/self.player.currentTime.timescale) % 60, nil];
-	NSString *dur = [NSString stringWithFormat:@"-%d:%02d", (int)((int)(self.player.duration -  (self.player.currentTime.value/self.player.currentTime.timescale))) / 60, (int)((int)(self.player.duration -  (self.player.currentTime.value/self.player.currentTime.timescale))) % 60, nil];
-	
-    itemDuration.text = dur;
 	currentTime.text = current;
     
 	self.progressSlider.value =  (self.player.currentTime.value/self.player.currentTime.timescale);
@@ -174,9 +172,14 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 
 -(void)updateViewForPlayerInfo:(AVPlayer*)p
 {
-    float playerDuration = self.player.currentItem.duration.value / self.player.currentItem.duration.timescale;
-	itemDuration.text = [NSString stringWithFormat:@"%d:%02d", (int)playerDuration / 60, (int)playerDuration % 60, nil];
+    float playerDuration = [(UAAudioFile *)[self.soundFiles objectAtIndex:selectedIndex] duration];
+    if (self.player.currentItem && !CMTIME_IS_INDEFINITE(self.player.currentItem.duration)) {
+        playerDuration = self.player.currentItem.duration.value / self.player.currentItem.duration.timescale;
+    }
+    
+    itemDuration.text = [NSString stringWithFormat:@"%d:%02d", (int)playerDuration / 60, (int)playerDuration % 60, nil];
 	indexLabel.text = [NSString stringWithFormat:@"%lu of %lu", (selectedIndex + 1), (unsigned long)[soundFiles count]];
+    
     self.progressSlider.minimumValue = 0.0f;
 	self.progressSlider.maximumValue = playerDuration;
 }

@@ -34,6 +34,22 @@
 	return self;
 }
 
+- (instancetype)initWithRemoteFilePath:(NSURL *)path
+                                 title:(NSString *)title
+                                artist:(NSString *)artist
+                                 album:(NSString *)album
+                              duration:(NSNumber *)duration {
+    
+    NSMutableDictionary * dictionary  = [NSMutableDictionary dictionary];
+    
+    if (title) dictionary[kUADictionaryTitle]     = title;
+    if (artist) dictionary[kUADictionaryArtist]    = artist;
+    if (album) dictionary[kUADictionaryAlbum]     = album;
+    if (duration) dictionary[kUADictionaryDuration]  = duration;
+	
+	return [self initWithRemoteFilePath:path andInfoDict:dictionary];
+}
+
 - (NSDictionary *)songID3Tags
 {	
 	AudioFileID fileID = nil;
@@ -101,10 +117,18 @@
 	free(rawID3Tag);
     
     NSMutableDictionary * dictionary  = [NSMutableDictionary dictionary];
-    dictionary[kUADictionaryTitle]    = [(__bridge NSDictionary*)piDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_Title]];
-    dictionary[kUADictionaryArtist]   = [(__bridge NSDictionary*)piDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_Artist]];
-    dictionary[kUADictionaryAlbum]    = [(__bridge NSDictionary*)piDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_Album]];
-    dictionary[kUADictionaryDuration] = [(__bridge NSDictionary*)piDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_ApproximateDurationInSeconds]];
+    
+    if ([(__bridge NSDictionary*)piDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_Title]])
+        dictionary[kUADictionaryTitle]    = [(__bridge NSDictionary*)piDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_Title]];
+    
+    if ([(__bridge NSDictionary*)piDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_Artist]])
+        dictionary[kUADictionaryArtist]   = [(__bridge NSDictionary*)piDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_Artist]];
+    
+    if ([(__bridge NSDictionary*)piDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_Album]])
+        dictionary[kUADictionaryAlbum]    = [(__bridge NSDictionary*)piDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_Album]];
+    
+    if ([(__bridge NSDictionary*)piDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_ApproximateDurationInSeconds]])
+        dictionary[kUADictionaryDuration] = [(__bridge NSDictionary*)piDict objectForKey:[NSString stringWithUTF8String:kAFInfoDictionary_ApproximateDurationInSeconds]];
 	
 	return dictionary;
 }
@@ -142,8 +166,8 @@
 
 - (float)duration
 {
-	if ([self.fileInfoDict objectForKey:kUADictionaryAlbum])
-		return [[self.fileInfoDict objectForKey:kUADictionaryAlbum] floatValue];
+	if ([self.fileInfoDict objectForKey:kUADictionaryDuration])
+		return [[self.fileInfoDict objectForKey:kUADictionaryDuration] floatValue];
 	else
 		return 0;
 }

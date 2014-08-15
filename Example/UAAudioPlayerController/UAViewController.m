@@ -21,14 +21,10 @@
     [super viewDidLoad];
 	// Do any additional setup after loading the view, typically from a nib.
     NSURL *fileURL = [NSURL URLWithString:@"https://api.soundcloud.com/tracks/293/stream?client_id=88542d62a809958f62af28b8958fe8a2"];
-    NSDictionary *fileParams = @{
-                                     kUADictionaryTitle:    @"Flickermood",
-                                     kUADictionaryArtist:   @"Forss",
-                                     kUADictionaryAlbum:    @"Electronic",
-                                     kUADictionaryDuration: [NSNumber numberWithInt:213890]
-                                 };
-    
-    UAAudioFile *file = [[UAAudioFile alloc] initWithRemoteFilePath:fileURL andInfoDict:fileParams];
+    UAAudioFile *file = [[UAAudioFile alloc] initWithRemoteFilePath:fileURL title:@"Flickermood"
+                                                             artist:@"Forss"
+                                                              album:@"Electronic"
+                                                           duration:[NSNumber numberWithInt:213890/1000]];
     
     UAAudioPlayerController *audioPlayer = [[UAAudioPlayerController alloc] initWithSoundFiles:@[file]
                                                                                         atPath:[[NSBundle mainBundle] bundlePath] andSelectedIndex:0];
