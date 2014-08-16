@@ -128,6 +128,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
 -(instancetype)init {
     if (self = [self initWithNibName:@"UAAudioPlayerController" bundle:nil]) {
         
+        _selectedIndex = 0;
         self.player = [[UAAVPlayer alloc] init];
         
         [[NSNotificationCenter defaultCenter] addObserver:self
@@ -362,12 +363,10 @@ static UAAudioPlayerController* _sharedInstance = nil;
     }
 }
 
-- (void)viewDidLoad
-{
+- (void)viewDidLoad {
 	[super viewDidLoad];
-    
-    self.selectedIndex = 0;
 	
+    self.title = [NSString stringWithFormat:@"%lu of %lu", self.selectedIndex + 1, (unsigned long)[self.dataSource numberOfTracksInPlayer:self]];
     if ([self respondsToSelector:@selector(setNeedsStatusBarAppearanceUpdate)])  [self setNeedsStatusBarAppearanceUpdate];
     if (self.isModal)
         self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
