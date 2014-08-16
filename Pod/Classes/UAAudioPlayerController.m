@@ -128,7 +128,6 @@ static UAAudioPlayerController* _sharedInstance = nil;
 -(instancetype)init {
     if (self = [self initWithNibName:@"UAAudioPlayerController" bundle:nil]) {
         
-        _selectedIndex = 0;
         self.player = [[UAAVPlayer alloc] init];
         
         [[NSNotificationCenter defaultCenter] addObserver:self
@@ -279,6 +278,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
         return;
     
     _selectedIndex = index;
+    
     self.player.volume = 1.0;
 	
 	for (UAAudioPlayerTableViewCell *cell in [songTableView visibleCells]) {
@@ -287,6 +287,8 @@ static UAAudioPlayerController* _sharedInstance = nil;
 	
 	UAAudioPlayerTableViewCell *cell = (UAAudioPlayerTableViewCell *)[songTableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:index inSection:0]];
 	cell.isSelectedIndex = YES;
+    
+    self.title = [NSString stringWithFormat:@"%lu of %lu", self.selectedIndex + 1, (unsigned long)[self.dataSource numberOfTracksInPlayer:self]];
     
     [self playItemAtIndex:self.selectedIndex];
 	[self updateViewForPlayerInfo];
@@ -363,14 +365,14 @@ static UAAudioPlayerController* _sharedInstance = nil;
 - (void)viewDidLoad
 {
 	[super viewDidLoad];
+    
+    self.selectedIndex = 0;
 	
     if ([self respondsToSelector:@selector(setNeedsStatusBarAppearanceUpdate)])  [self setNeedsStatusBarAppearanceUpdate];
-    
     if (self.isModal)
         self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
                                                                                               target:self
                                                                                               action:@selector(dismissAudioPlayer)];
-    
     // Set itself as the first responder
     [self becomeFirstResponder];
     
@@ -396,9 +398,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
     [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
     [self setUpAudioSession];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onAudioSessionEvent:) name:AVAudioSessionInterruptionNotification object:nil];
-	
-	self.title = [NSString stringWithFormat:@"%lu of %lu", self.selectedIndex + 1, (unsigned long)[self.dataSource numberOfTracksInPlayer:self]];
-    
+	   
     self.marqueeLabel.marqueeType = MLContinuous;
     self.marqueeLabel.animationDelay = 0.0f;
     self.marqueeLabel.fadeLength = 10.0f;
