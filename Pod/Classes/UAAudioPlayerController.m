@@ -369,7 +369,11 @@ static UAAudioPlayerController* _sharedInstance = nil;
     [self.player seekToTime:kCMTimeZero];
     [self.player replaceCurrentItemWithPlayerItem:nil];
     
+    _selectedIndex = 0;
     [self.songTableView reloadData];
+    [self updateViewForPlayerInfo];
+    [self updateViewForPlayerState];
+    [self updateArtworkImage];
 }
 
 - (void)viewDidLoad {
