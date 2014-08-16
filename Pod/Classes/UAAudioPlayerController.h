@@ -101,4 +101,6 @@
 - (void)toggleShuffle;
 - (void)toggleRepeat;
 
+- (void)reloadTracks;
+
 @end

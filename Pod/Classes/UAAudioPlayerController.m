@@ -363,6 +363,15 @@ static UAAudioPlayerController* _sharedInstance = nil;
     }
 }
 
+-(void)reloadTracks {
+    
+    [self.player stop];
+    [self.player seekToTime:kCMTimeZero];
+    [self.player replaceCurrentItemWithPlayerItem:nil];
+    
+    [self.songTableView reloadData];
+}
+
 - (void)viewDidLoad {
 	[super viewDidLoad];
 	
