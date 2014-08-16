@@ -25,7 +25,7 @@
 }
 
 -(BOOL)playing {
-    return self.currentItem && self.rate > 0;
+    return self.currentItem && self.rate != 0;
 }
 
 -(void)stop {
@@ -44,7 +44,6 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState);
 
 static UAAudioPlayerController* _sharedInstance = nil;
 
-@synthesize soundFiles;
 @synthesize soundFilesPath;
 
 @synthesize player;
@@ -79,20 +78,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
 @synthesize repeatOne;
 @synthesize shuffle;
 
-
-+ (UAAudioPlayerController *)sharedInstance {
-    @synchronized(self) {
-        if (nil == _sharedInstance)
-            _sharedInstance = [[UAAudioPlayerController alloc] initWithSoundFiles:nil atPath:@"/" andSelectedIndex:0];
-    }
-    return _sharedInstance;
-}
-+ (BOOL) sharedInstanceExist {
-    return (_sharedInstance != nil);
-}
-
-void interruptionListenerCallback (void *userData, UInt32 interruptionState)
-{
+void interruptionListenerCallback (void *userData, UInt32 interruptionState) {
 	UAAudioPlayerController *vc = (__bridge UAAudioPlayerController *)userData;
 	if (interruptionState == kAudioSessionBeginInterruption)
 		vc.interrupted = YES;
@@ -100,19 +86,62 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 		vc.interrupted = NO;
 }
 
-- (void)updateCurrentTime {
++ (UAAudioPlayerController *)sharedInstance {
+    @synchronized(self) {
+        if (nil == _sharedInstance)
+            _sharedInstance = [[UAAudioPlayerController alloc] init];
+    }
+    return _sharedInstance;
+}
+
++ (BOOL) sharedInstanceExist {
+    return (_sharedInstance != nil);
+}
+
+-(instancetype)initWithDelegate:(id<UAAudioPlayerDelegate>)aDelegate
+                     dataSource:(id<UAAudioPlayerDataSource>)aDataSource {
+    if (self = [self init]) {
+        self.delegate = aDelegate;
+        self.dataSource = aDataSource;
+    }
+    
+    return self;
+}
+
+-(instancetype)init {
+    if (self = [self initWithNibName:@"UAAudioPlayerController" bundle:nil]) {
         
+        selectedIndex = 0;
+        self.player = [[AVPlayer alloc] init];
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(playerItemDidReachEnd:)
+                                                     name:AVPlayerItemDidPlayToEndTimeNotification
+                                                   object:[self.player currentItem]];
+        
+        [self.player addObserver:self forKeyPath:@"status" options:0 context:nil];
+        [self.player addObserver:self forKeyPath:@"rate" options: NSKeyValueObservingOptionNew context:nil];
+        [self.player addObserver:self forKeyPath:@"currentItem.duration" options: NSKeyValueObservingOptionNew context:nil];
+        
+		[self updateViewForPlayerInfo];
+		[self updateViewForPlayerState];
+    }
+    return self;
+}
+
+- (void)updateCurrentTime {
+    
+    NSLog(@"%s: %lld", __func__, self.player.currentTime.value / self.player.currentTime.timescale);
     NSString *current = [NSString stringWithFormat:@"%d:%02d", (int) (self.player.currentTime.value/self.player.currentTime.timescale) / 60, (int) (self.player.currentTime.value/self.player.currentTime.timescale) % 60, nil];
 	currentTime.text = current;
     
 	self.progressSlider.value =  (self.player.currentTime.value/self.player.currentTime.timescale);
 }
 
-- (void)updateViewForPlayerState:(AVPlayer *)p
+- (void)updateViewForPlayerState
 {
-	NSString *title = [[soundFiles objectAtIndex:selectedIndex] title];
-	NSString *artist = [[soundFiles objectAtIndex:selectedIndex] artist];
-	NSString *album = [[soundFiles objectAtIndex:selectedIndex] album];
+	NSString *title = [self.dataSource musicPlayer:self titleForTrack:selectedIndex];
+	NSString *artist = [self.dataSource musicPlayer:self artistForTrack:selectedIndex];
+	NSString *album = [self.dataSource musicPlayer:self albumForTrack:selectedIndex];
     
     self.marqueeLabel.text = [NSString stringWithFormat:@"%@ - %@ - %@", title, artist, album];
 	
@@ -121,23 +150,26 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 	if (updateTimer)
 		[updateTimer invalidate];
 	
+    NSLog(@"Current rate: %f", self.player.rate);
 	if (self.player.playing) {
         playButton.hidden = YES;
         pauseButton.hidden = NO;
-		self.updateTimer = [NSTimer scheduledTimerWithTimeInterval:.01 target:self selector:@selector(updateCurrentTime) userInfo:p repeats:YES];
+		self.updateTimer = [NSTimer scheduledTimerWithTimeInterval:.01
+                                                            target:self
+                                                          selector:@selector(updateCurrentTime)
+                                                          userInfo:nil
+                                                           repeats:YES];
 	}
 	else {
         pauseButton.hidden = YES;
         playButton.hidden = NO;
-        
         updateTimer = nil;
 	}
 	
-	if (![songTableView superview])
-	{
+	if (![songTableView superview]) {
         NSLog(@"%s: %@ %lu",__func__,artworkView,artworkView.state);
         [self.artworkView setImage:nil forState:UIControlStateNormal];
-        UIImage *coverImage = [[soundFiles objectAtIndex:selectedIndex] coverImage];
+        UIImage *coverImage = [[self.dataSource audioTrackAtIndex:selectedIndex] coverImage];
 		[self.artworkView setImage:coverImage forState:UIControlStateNormal];
 	}
     
@@ -149,10 +181,10 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 		nextButton.enabled = [self canGoToNextTrack];
 	previousButton.enabled = [self canGoToPreviousTrack];
     
-    if ([MPNowPlayingInfoCenter class] && [soundFiles count] >0 )
+    if ([MPNowPlayingInfoCenter class] && [self.dataSource numberOfTracksInPlayer:self] >0 )
     {
         /* we're on iOS 5, so set up the now playing center */
-        UAAudioFile *soundFile = [soundFiles objectAtIndex:selectedIndex];
+        UAAudioFile *soundFile = [self.dataSource audioTrackAtIndex:selectedIndex];
         
         NSMutableDictionary *currentlyPlayingTrackInfo = [NSMutableDictionary dictionary];
         [currentlyPlayingTrackInfo setObject:[soundFile title] forKey:MPMediaItemPropertyTitle];
@@ -160,8 +192,7 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
         [currentlyPlayingTrackInfo setObject:[NSNumber numberWithFloat:[soundFile duration]] forKey:MPMediaItemPropertyPlaybackDuration];
         [currentlyPlayingTrackInfo setObject:[NSNumber numberWithInt:1] forKey:MPNowPlayingInfoPropertyPlaybackRate];
         
-        if ([[soundFiles objectAtIndex:selectedIndex] coverImage])
-        {
+        if ([[self.dataSource audioTrackAtIndex:selectedIndex] coverImage]) {
             MPMediaItemArtwork *albumArt = [[MPMediaItemArtwork alloc] initWithImage:[soundFile coverImage]];
             [currentlyPlayingTrackInfo setObject:albumArt forKey:MPMediaItemPropertyArtwork];
         }
@@ -170,53 +201,22 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
     }
 }
 
--(void)updateViewForPlayerInfo:(AVPlayer*)p
+-(void)updateViewForPlayerInfo
 {
-    float playerDuration = [(UAAudioFile *)[self.soundFiles objectAtIndex:selectedIndex] duration];
+    float playerDuration = [[self.dataSource audioTrackAtIndex:selectedIndex] duration];
     if (self.player.currentItem && !CMTIME_IS_INDEFINITE(self.player.currentItem.duration)) {
         playerDuration = self.player.currentItem.duration.value / self.player.currentItem.duration.timescale;
     }
     
     itemDuration.text = [NSString stringWithFormat:@"%d:%02d", (int)playerDuration / 60, (int)playerDuration % 60, nil];
-	indexLabel.text = [NSString stringWithFormat:@"%lu of %lu", (selectedIndex + 1), (unsigned long)[soundFiles count]];
+	indexLabel.text = [NSString stringWithFormat:@"%lu of %lu", (selectedIndex + 1), (unsigned long)[self.dataSource numberOfTracksInPlayer:self]];
     
     self.progressSlider.minimumValue = 0.0f;
 	self.progressSlider.maximumValue = playerDuration;
 }
 
-- (UAAudioPlayerController *)initWithSoundFiles:(NSMutableArray *)songs atPath:(NSString *)path andSelectedIndex:(int)index
-{
-	if (self = [super initWithNibName:@"UAAudioPlayerController" bundle:nil])
-	{
-		self.soundFiles = songs;
-		self.soundFilesPath = path;
-		selectedIndex = index;
-        
-		NSError *error = nil;
-        
-		self.player = [[AVPlayer alloc] init];
-        [[NSNotificationCenter defaultCenter] addObserver:self
-                                                 selector:@selector(playerItemDidReachEnd:)
-                                                     name:AVPlayerItemDidPlayToEndTimeNotification
-                                                   object:[self.player currentItem]];
-        
-        [self.player addObserver:self forKeyPath:@"status" options:0 context:nil];
-        [self.player addObserver:self forKeyPath:@"rate" options:NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew context:nil];
-        [self.player addObserver:self forKeyPath:@"currentItem.duration" options:NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew context:nil];
-        
-		[self updateViewForPlayerInfo:player];
-		[self updateViewForPlayerState:player];
-		
-		if (error)
-			NSLog(@"%@", error);
-	}
-	
-	return self;
-}
-
 - (void) setSoundFiles:(NSMutableArray *)songs atPath:(NSString *)path selectedIndex:(int)index {
     
-    self.soundFiles = songs;
     self.soundFilesPath = path;
     self.selectedIndex = index;
     self.player.volume = 1.0;
@@ -225,13 +225,13 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
     
     [self.songTableView reloadData];
     
-    [self updateViewForPlayerInfo:player];
-    [self updateViewForPlayerState:player];
+    [self updateViewForPlayerInfo];
+    [self updateViewForPlayerState];
     
 }
 
 - (void) setSelectedIndex:(NSUInteger)index {
-    if ([soundFiles count]<=index)
+    if ([self.dataSource numberOfTracksInPlayer:self]<=index)
         return;
     
     self.selectedIndex = index;
@@ -246,8 +246,8 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
     
     [self playItemAtIndex:selectedIndex];
     
-	[self updateViewForPlayerInfo:player];
-	[self updateViewForPlayerState:player];
+	[self updateViewForPlayerInfo];
+	[self updateViewForPlayerState];
 }
 
 - (void)viewDidLoad
@@ -285,8 +285,8 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 	UInt32 sessionCategory = kAudioSessionCategory_MediaPlayback;
 	AudioSessionSetProperty(kAudioSessionProperty_AudioCategory, sizeof(sessionCategory), &sessionCategory);
 	
-	UAAudioFile *selectedSong = [self.soundFiles objectAtIndex:selectedIndex];
-	self.title = [NSString stringWithFormat:@"%lu of %lu", selectedIndex + 1, (unsigned long)self.soundFiles.count];
+	UAAudioFile *selectedSong = [self.dataSource audioTrackAtIndex:selectedIndex];
+	self.title = [NSString stringWithFormat:@"%lu of %lu", selectedIndex + 1, (unsigned long)[self.dataSource numberOfTracksInPlayer:self]];
     
     self.marqueeLabel.marqueeType = MLContinuous;
     self.marqueeLabel.animationDelay = 0.0f;
@@ -349,8 +349,8 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 	v.backgroundColor = [UIColor clearColor];
 	[self.songTableView setTableFooterView:v];
     
-    [self updateViewForPlayerInfo:player];
-	[self updateViewForPlayerState:player];
+    [self updateViewForPlayerInfo];
+	[self updateViewForPlayerState];
     
 }
 
@@ -375,15 +375,8 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 {
 	[super viewDidAppear:animated];
     
-	[player play];
-    
-    if([_delegate respondsToSelector:@selector(audioPlayer:didBeginPlaying:)]) {
-        UAAudioFile* curr = (UAAudioFile *)[soundFiles objectAtIndex:selectedIndex];
-        [_delegate audioPlayer:self didBeginPlaying:curr];
-    }
-	
-	[self updateViewForPlayerInfo:player];
-	[self updateViewForPlayerState:player];
+	[self updateViewForPlayerInfo];
+	[self updateViewForPlayerState];
     
     
 }
@@ -396,10 +389,7 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
     else {
         [self.parentViewController dismissViewControllerAnimated:YES completion:nil];
     }
-    
-    if([_delegate respondsToSelector:@selector(audioPlayerDidClose:)]) {
-        [_delegate audioPlayerDidClose:self];
-    }
+
 }
 
 - (void)showSongFiles
@@ -448,8 +438,8 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 		[shuffleButton setImage:[UIImage imageWithContentsOfFile:[[NSBundle mainBundle] pathForResource:@"player-shuffle-on" ofType:@"png"]] forState:UIControlStateNormal];
 	}
 	
-	[self updateViewForPlayerInfo:player];
-	[self updateViewForPlayerState:player];
+	[self updateViewForPlayerInfo];
+	[self updateViewForPlayerState];
 }
 
 - (void)toggleRepeat
@@ -476,8 +466,8 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 		repeatAll = YES;
 	}
 	
-	[self updateViewForPlayerInfo:player];
-	[self updateViewForPlayerState:player];
+	[self updateViewForPlayerInfo];
+	[self updateViewForPlayerState];
 }
 
 - (BOOL)canGoToNextTrack
@@ -485,7 +475,7 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
     if (repeatOne || repeatAll || shuffle) {
         return YES;
     }
-	else if (selectedIndex + 1 == [self.soundFiles count])
+	else if (selectedIndex + 1 == [self.dataSource numberOfTracksInPlayer:self])
 		return NO;
 	else
 		return YES;
@@ -501,17 +491,29 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 
 -(void)play
 {
-    if (self.player.currentItem == nil && self.soundFiles.count > 0) {
+    if (self.player.currentItem == nil && [self.dataSource numberOfTracksInPlayer:self] > 0) {
+        
         [self playItemAtIndex:selectedIndex];
+        if ([_delegate respondsToSelector:@selector(musicPlayer:didChangeTrack:)]) {
+            [_delegate musicPlayer:self didChangeTrack:selectedIndex];
+        }
+        
     } else if (self.player.playing == YES)  {
 		[self.player pause];
+        if([_delegate respondsToSelector:@selector(musicPlayerDidStopPlaying:)]) {
+            [_delegate musicPlayerDidStopPlaying:self];
+        }
 	}
 	else {
-		[self.player play];
+		
+        [self.player play];
+        if([_delegate respondsToSelector:@selector(musicPlayerDidStartPlaying:)]) {
+            [_delegate musicPlayerDidStartPlaying:self];
+        }
 	}
 	
-	[self updateViewForPlayerInfo:player];
-	[self updateViewForPlayerState:player];
+	[self updateViewForPlayerInfo];
+	[self updateViewForPlayerState];
     
 }
 
@@ -521,42 +523,28 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 	selectedIndex = newIndex;
     
     [self playItemAtIndex:selectedIndex];
-    
-    if([_delegate respondsToSelector:@selector(audioPlayer:didStopPlaying:)]) {
-        UAAudioFile* curr = (UAAudioFile *)[soundFiles objectAtIndex:selectedIndex];
-        [_delegate audioPlayer:self didStopPlaying:curr];
-    }
-    
-    if([_delegate respondsToSelector:@selector(audioPlayer:didBeginPlaying:)]) {
-        UAAudioFile* curr = (UAAudioFile *)[soundFiles objectAtIndex:selectedIndex];
-        [_delegate audioPlayer:self didBeginPlaying:curr];
-    }
 	
-	[self updateViewForPlayerInfo:player];
-	[self updateViewForPlayerState:player];
+	[self updateViewForPlayerInfo];
+	[self updateViewForPlayerState];
 }
 
 - (void)next
 {
 	NSUInteger newIndex;
 	
-	if (shuffle)
-	{
-		newIndex = rand() % [soundFiles count];
+	if (shuffle) {
+		newIndex = rand() % [self.dataSource numberOfTracksInPlayer:self];
 	}
-	else if (repeatOne)
-	{
+	else if (repeatOne) {
 		newIndex = selectedIndex;
 	}
-	else if (repeatAll)
-	{
-		if (selectedIndex + 1 == [self.soundFiles count])
+	else if (repeatAll) {
+		if (selectedIndex + 1 == [self.dataSource numberOfTracksInPlayer:self])
 			newIndex = 0;
 		else
 			newIndex = selectedIndex + 1;
 	}
-	else
-	{
+	else{
 		newIndex = selectedIndex + 1;
 	}
 	
@@ -564,27 +552,33 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
     
     [self playItemAtIndex:selectedIndex];
 	
-    if([_delegate respondsToSelector:@selector(audioPlayer:didStopPlaying:)]) {
-        UAAudioFile* curr = (UAAudioFile *)[soundFiles objectAtIndex:selectedIndex];
-        [_delegate audioPlayer:self didStopPlaying:curr];
-    }
-    
-    if([_delegate respondsToSelector:@selector(audioPlayer:didBeginPlaying:)]) {
-        UAAudioFile* curr = (UAAudioFile *)[soundFiles objectAtIndex:selectedIndex];
-        [_delegate audioPlayer:self didBeginPlaying:curr];
-    }
-	
-	[self updateViewForPlayerInfo:player];
-	[self updateViewForPlayerState:player];
+	[self updateViewForPlayerInfo];
+	[self updateViewForPlayerState];
 }
 
 -(void)playItemAtIndex:(NSUInteger)aSelectedIndex {
-    [self.player pause];
     
-    AVPlayerItem *newItem = [[AVPlayerItem alloc] initWithURL:[(UAAudioFile *)[soundFiles objectAtIndex:aSelectedIndex] filePath]];
+    if (self.player.currentItem && self.player.rate != 0) {
+        
+        [self.player pause];
+        
+        if([_delegate respondsToSelector:@selector(musicPlayerDidStopPlaying:)]) {
+            [_delegate musicPlayerDidStopPlaying:self];
+        }
+    }
+    
+    AVPlayerItem *newItem = [[AVPlayerItem alloc] initWithURL:[[self.dataSource audioTrackAtIndex:selectedIndex] filePath]];
     [self.player replaceCurrentItemWithPlayerItem:newItem];
     
-    [self.player play];
+    self.player.rate = 1.0;
+    [self.player seekToTime: kCMTimeZero];
+    
+    if([_delegate respondsToSelector:@selector(musicPlayerDidStartPlaying:)]) {
+        [_delegate musicPlayerDidStartPlaying:self];
+    }
+    
+    [self updateViewForPlayerInfo];
+	[self updateViewForPlayerState];
 }
 
 - (void)volumeSliderMoved:(UISlider *)sender
@@ -613,16 +607,15 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
         [self next];
     } else if (interrupted) {
 		[self.player play];
-        if([_delegate respondsToSelector:@selector(audioPlayer:didBeginPlaying:)]) {
-            UAAudioFile* curr = (UAAudioFile *)[soundFiles objectAtIndex:selectedIndex];
-            [_delegate audioPlayer:self didBeginPlaying:curr];
+        if([_delegate respondsToSelector:@selector(musicPlayerDidStartPlaying:)]) {
+            [_delegate musicPlayerDidStartPlaying:self];
         }
     } else {
 		[self.player stop];
     }
     
-	[self updateViewForPlayerInfo:player];
-	[self updateViewForPlayerState:player];
+	[self updateViewForPlayerInfo];
+	[self updateViewForPlayerState];
 }
 
 - (void)playerDecodeErrorDidOccur:(AVPlayer *)p error:(NSError *)error
@@ -650,11 +643,10 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 	printf("(apei) Interruption ended\n");
 	[self.player play];
     
-    if([_delegate respondsToSelector:@selector(audioPlayer:didBeginPlaying:)]) {
-        UAAudioFile* curr = (UAAudioFile *)[soundFiles objectAtIndex:selectedIndex];
-        [_delegate audioPlayer:self didBeginPlaying:curr];
+    if([_delegate respondsToSelector:@selector(musicPlayerDidStartPlaying:)]) {
+        [_delegate musicPlayerDidStartPlaying:self];
     }
-	
+    
 	// remove the interruption key. it won't be needed
 	[[NSUserDefaults standardUserDefaults] removeObjectForKey:@"Interruption"];
 }
@@ -669,7 +661,7 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 // Customize the number of rows in the table view.
 - (NSInteger)tableView:(UITableView *)aTableView numberOfRowsInSection:(NSInteger)section
 {
-    return [soundFiles count];
+    return [self.dataSource numberOfTracksInPlayer:self];
 }
 
 
@@ -684,9 +676,9 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 		cell = [[UAAudioPlayerTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
 	}
 	
-	cell.title = [[soundFiles objectAtIndex:indexPath.row] title];
-	cell.number = [NSString stringWithFormat:@"%d.", (indexPath.row + 1)];
-	cell.duration = [[soundFiles objectAtIndex:indexPath.row] durationInMinutes];
+	cell.title = [self.dataSource musicPlayer:self titleForTrack:indexPath.row];
+	cell.number = [NSString stringWithFormat:@"%ld.", (indexPath.row + 1)];
+	cell.duration = [[self.dataSource audioTrackAtIndex:indexPath.row] durationInMinutes];
     
 	cell.isEven = indexPath.row % 2;
 	
@@ -714,18 +706,8 @@ void interruptionListenerCallback (void *userData, UInt32 interruptionState)
 	
     [self playItemAtIndex:selectedIndex];
 	
-    if([_delegate respondsToSelector:@selector(audioPlayer:didStopPlaying:)]) {
-        UAAudioFile* curr = (UAAudioFile *)[soundFiles objectAtIndex:selectedIndex];
-        [_delegate audioPlayer:self didStopPlaying:curr];
-    }
-    
-    if([_delegate respondsToSelector:@selector(audioPlayer:didBeginPlaying:)]) {
-        UAAudioFile* curr = (UAAudioFile *)[soundFiles objectAtIndex:selectedIndex];
-        [_delegate audioPlayer:self didBeginPlaying:curr];
-    }
-	
-	[self updateViewForPlayerInfo:player];
-	[self updateViewForPlayerState:player];
+	[self updateViewForPlayerInfo];
+	[self updateViewForPlayerState];
 }
 
 - (BOOL)tableView:(UITableView *)table canEditRowAtIndexPath:(NSIndexPath *)indexPath
@@ -916,7 +898,7 @@ CGContextRef MyCreateBitmapContext(int pixelsWide, int pixelsHigh)
 
 #pragma mark - AudioPlayer
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
-    NSLog(@"%s: %@", __func__, keyPath);
+    NSLog(@"%s: %@ change: %@", __func__, keyPath, change);
     
     if (object == self.player && [keyPath isEqualToString:@"status"]) {
         if (self.player.status == AVPlayerStatusFailed) {
@@ -931,8 +913,8 @@ CGContextRef MyCreateBitmapContext(int pixelsWide, int pixelsHigh)
             
         }
         
-        [self updateViewForPlayerInfo:player];
-		[self updateViewForPlayerState:player];
+        [self updateViewForPlayerInfo];
+		[self updateViewForPlayerState];
     } else if ([keyPath isEqualToString:@"rate"]) {
         if ([self.player rate]) {
             NSLog(@"Playing");
@@ -941,12 +923,13 @@ CGContextRef MyCreateBitmapContext(int pixelsWide, int pixelsHigh)
             NSLog(@"Paused");
         }
         
-        [self updateViewForPlayerInfo:player];
-		[self updateViewForPlayerState:player];
+        [self updateViewForPlayerInfo];
+		[self updateViewForPlayerState];
     } else if ([keyPath isEqualToString:@"currentItem.duration"]) {
         NSLog(@"Got duration: %f", self.player.duration);
-        [self updateViewForPlayerInfo:player];
-		[self updateViewForPlayerState:player];
+        
+        [self updateViewForPlayerInfo];
+		[self updateViewForPlayerState];
     }
 }
 
@@ -956,16 +939,15 @@ CGContextRef MyCreateBitmapContext(int pixelsWide, int pixelsHigh)
         [self next];
     } else if (interrupted) {
 		[self.player play];
-        if([_delegate respondsToSelector:@selector(audioPlayer:didBeginPlaying:)]) {
-            UAAudioFile* curr = (UAAudioFile *)[soundFiles objectAtIndex:selectedIndex];
-            [_delegate audioPlayer:self didBeginPlaying:curr];
+        if([_delegate respondsToSelector:@selector(musicPlayerDidStartPlaying:)]) {
+            [_delegate musicPlayerDidStartPlaying:self];
         }
     } else {
 		[self.player stop];
     }
     
-	[self updateViewForPlayerInfo:player];
-	[self updateViewForPlayerState:player];
+	[self updateViewForPlayerInfo];
+	[self updateViewForPlayerState];
 }
 
 @end

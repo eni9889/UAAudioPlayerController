@@ -9,20 +9,20 @@
 #import <Foundation/Foundation.h>
 #import <AVFoundation/AVFoundation.h>
 #import <QuartzCore/QuartzCore.h>
-#import "UAAudioFile.h"
 #import <MediaPlayer/MediaPlayer.h>
+
+#import "UAAudioPlayerDataSource.h"
+#import "UAAudioPlayerDelegate.h"
+#import "UAAudioFile.h"
 #import "MarqueeLabel.h"
 
 @protocol UAAudioPlayerControllerDelegate;
 
 @interface UAAudioPlayerController : UIViewController <AVAudioPlayerDelegate, UITableViewDelegate, UITableViewDataSource>
 {
-	NSMutableArray		*soundFiles;
 	NSString			*soundFilesPath;
 	NSUInteger			selectedIndex;
-	
-	AVPlayer		*player;
-	
+    
 	CAGradientLayer		*gradientLayer;
 	
 	UIButton			*toggleButton;
@@ -38,11 +38,15 @@
 	BOOL				shuffle;
 }
 
-@property (nonatomic,assign) id <UAAudioPlayerControllerDelegate> delegate;
-@property (nonatomic, retain) NSMutableArray *soundFiles;
+/// The UAAudioPlayerDelegate object that acts as the delegate of the receiving music player.
+@property (nonatomic,assign) id<UAAudioPlayerDelegate> delegate;
+
+/// The UAAudioPlayerDataSource object that acts as the data source of the receiving music player.
+@property (nonatomic,assign) id<UAAudioPlayerDataSource> dataSource;
+
 @property (nonatomic, copy) NSString *soundFilesPath;
 
-@property (nonatomic, retain) AVPlayer *player;
+@property (nonatomic, strong) AVPlayer *player;
 
 @property (nonatomic, retain) CAGradientLayer *gradientLayer;
 
@@ -80,9 +84,9 @@
 + (UAAudioPlayerController *)sharedInstance;
 + (BOOL) sharedInstanceExist;
 
-- (UAAudioPlayerController *)initWithSoundFiles:(NSMutableArray *)songs atPath:(NSString *)path andSelectedIndex:(int)index;
+-(instancetype)initWithDelegate:(id<UAAudioPlayerDelegate>)aDelegate
+                     dataSource:(id<UAAudioPlayerDataSource>)aDataSource;
 
-- (void) setSoundFiles:(NSMutableArray *)songs atPath:(NSString *)path selectedIndex:(int)index;
 - (void) setSelectedIndex:(NSUInteger)index;
 
 - (void)dismissAudioPlayer;
@@ -100,17 +104,4 @@
 - (void)toggleShuffle;
 - (void)toggleRepeat;
 
-@end
-
-
-@protocol UAAudioPlayerControllerDelegate <NSObject>
-@required
-@optional
-- (void) audioPlayer:(UAAudioPlayerController*)player
-     didBeginPlaying:(UAAudioFile*)audio;
-
-- (void) audioPlayer:(UAAudioPlayerController*)player
-      didStopPlaying:(UAAudioFile*)audio;
-
-- (void) audioPlayerDidClose:(UAAudioPlayerController*)player;
 @end

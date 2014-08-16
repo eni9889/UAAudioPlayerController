@@ -41,7 +41,7 @@
                                 <outlet property="delegate" destination="-1" id="9Ib-nk-uyX"/>
                             </connections>
                         </tableView>
-                        <button appearanceType="aqua" opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Y1N-an-ycn" userLabel="artworkView">
+                        <button appearanceType="aqua" opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" adjustsImageWhenHighlighted="NO" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Y1N-an-ycn" userLabel="artworkView">
                             <rect key="frame" x="0.0" y="0.0" width="320" height="320"/>
                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                             <state key="normal" image="AudioPlayerNoArtwork.png">
