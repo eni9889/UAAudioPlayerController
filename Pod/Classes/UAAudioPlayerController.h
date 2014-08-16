@@ -89,6 +89,7 @@
 - (void)dismissAudioPlayer;
 - (void)showSongFiles;
 
+- (BOOL)isPlaying;
 - (BOOL)canGoToNextTrack;
 - (BOOL)canGoToPreviousTrack;
 

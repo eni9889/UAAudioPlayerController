@@ -630,6 +630,10 @@ static UAAudioPlayerController* _sharedInstance = nil;
 		return YES;
 }
 
+- (BOOL)isPlaying {
+    return self.player && [self.player playing];
+}
+
 -(void)play
 {
     if (self.player.currentItem == nil && [self.dataSource numberOfTracksInPlayer:self] > 0) {
