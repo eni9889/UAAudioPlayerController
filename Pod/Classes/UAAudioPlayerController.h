@@ -17,6 +17,7 @@
 #import "MarqueeLabel.h"
 
 @protocol UAAudioPlayerControllerDelegate;
+@class UAAVPlayer;
 
 @interface UAAudioPlayerController : UIViewController <AVAudioPlayerDelegate, UITableViewDelegate, UITableViewDataSource>
 {
@@ -29,9 +30,7 @@
 	UILabel				*indexLabel;
 		
 	UIView				*overlayView;
-	
-	NSTimer				*updateTimer;
-	
+		
 	BOOL				interrupted;
 	BOOL				repeatAll;
 	BOOL				repeatOne;
@@ -46,7 +45,7 @@
 
 @property (nonatomic, copy) NSString *soundFilesPath;
 
-@property (nonatomic, strong) AVPlayer *player;
+@property (nonatomic, strong) UAAVPlayer *player;
 
 @property (nonatomic, retain) CAGradientLayer *gradientLayer;
 
@@ -72,8 +71,6 @@
 @property (nonatomic, strong) IBOutlet MPVolumeView *volumeSlider;
 
 @property (nonatomic, retain) UIView *overlayView;
-
-@property (nonatomic, retain) NSTimer *updateTimer;
 
 @property (nonatomic, assign) BOOL interrupted;
 @property (nonatomic, assign) BOOL repeatAll;
