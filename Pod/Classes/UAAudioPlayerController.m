@@ -366,11 +366,10 @@ static UAAudioPlayerController* _sharedInstance = nil;
 	
     if ([self respondsToSelector:@selector(setNeedsStatusBarAppearanceUpdate)])  [self setNeedsStatusBarAppearanceUpdate];
     
-    if (self.isModal) {
+    if (self.isModal)
         self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
                                                                                               target:self
                                                                                               action:@selector(dismissAudioPlayer)];
-    }
     
     // Set itself as the first responder
     [self becomeFirstResponder];
@@ -454,6 +453,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
     
     
 	self.songTableView.showsVerticalScrollIndicator = NO;
+    self.songTableView.separatorInset = UIEdgeInsetsMake(0, 5, 0, 0);
     
 	UIView *v = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 0, 0)];
 	v.backgroundColor = [UIColor clearColor];
@@ -766,6 +766,9 @@ static UAAudioPlayerController* _sharedInstance = nil;
     return [self.dataSource numberOfTracksInPlayer:self];
 }
 
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
+    return 50;
+}
 
 // Customize the appearance of table view cells.
 - (UITableViewCell *)tableView:(UITableView *)aTableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -820,10 +823,6 @@ static UAAudioPlayerController* _sharedInstance = nil;
 	return NO;
 }
 
-
-- (CGFloat)tableView:(UITableView *)aTableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
-	return 44;
-}
 
 - (UIModalPresentationStyle) modalPresentationStyle {
 #if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 30200)
