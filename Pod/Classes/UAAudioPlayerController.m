@@ -28,7 +28,7 @@
                    [[[self tabBarController] presentingViewController] isKindOfClass:[UITabBarController class]]);
         
     }
-    return isModal;        
+    return isModal;
     
 }
 
@@ -155,26 +155,26 @@ static UAAudioPlayerController* _sharedInstance = nil;
         // Setup boundary time observer to trigger when audio really begins,
         // specifically after 1/3 of a second playback
         startObs = [self.player addBoundaryTimeObserverForTimes:
-               @[[NSValue valueWithCMTime:CMTimeMake(1, 3)]]
-                                                queue:NULL
-                                           usingBlock:^{
-                                               
-                                               // Raise a notificaiton when playback has started
-                                               [[NSNotificationCenter defaultCenter]
-                                                postNotificationName:@"PlaybackStartedNotification"
-                                                object:nil];
-
-                                           }];
+                    @[[NSValue valueWithCMTime:CMTimeMake(1, 3)]]
+                                                          queue:NULL
+                                                     usingBlock:^{
+                                                         
+                                                         // Raise a notificaiton when playback has started
+                                                         [[NSNotificationCenter defaultCenter]
+                                                          postNotificationName:@"PlaybackStartedNotification"
+                                                          object:nil];
+                                                         
+                                                     }];
         
         timeObs = [self.player addPeriodicTimeObserverForInterval:CMTimeMake(1, 1)
-                                                  queue:NULL
-                                             usingBlock:^(CMTime time) {
-                                                     CMTime endTime = CMTimeConvertScale (blockPlayer.currentItem.asset.duration, blockPlayer.currentTime.timescale, kCMTimeRoundingMethod_RoundHalfAwayFromZero);
-                                                     if (CMTimeCompare(endTime, kCMTimeZero) != 0) {
-                                                         [blockSelf syncScrubber];
-                                                     }
-                                                  }];
-
+                                                            queue:NULL
+                                                       usingBlock:^(CMTime time) {
+                                                           CMTime endTime = CMTimeConvertScale (blockPlayer.currentItem.asset.duration, blockPlayer.currentTime.timescale, kCMTimeRoundingMethod_RoundHalfAwayFromZero);
+                                                           if (CMTimeCompare(endTime, kCMTimeZero) != 0) {
+                                                               [blockSelf syncScrubber];
+                                                           }
+                                                       }];
+        
         
 		[self updateViewForPlayerInfo];
 		[self updateViewForPlayerState];
@@ -249,15 +249,32 @@ static UAAudioPlayerController* _sharedInstance = nil;
 }
 
 -(void)updateArtworkImage {
+    
+    UIImage *placeholderImage = [UIImage imageNamed:@"AudioPlayerNoArtwork"];
+    [self.artworkView setImage:placeholderImage];
+    
     if ([self.dataSource respondsToSelector:@selector(musicPlayer:artworkURLForTrack:)]) {
+        
+        __block UAAudioPlayerController *blockSelf = self;
+        __weak UIImageView *weakArtworkView = self.artworkView;
+        
         NSURL *artworkURL = [self.dataSource musicPlayer:self artworkURLForTrack:self.selectedIndex];
-        [self.artworkView setImageWithURL:artworkURL placeholderImage:[UIImage imageNamed:@"AudioPlayerNoArtwork"]];
-    } else {
-        [self.artworkView setImage:[UIImage imageNamed:@"AudioPlayerNoArtwork"]];
+        
+        [self.artworkView setImageWithURLRequest:[NSURLRequest requestWithURL:artworkURL]
+                                placeholderImage:placeholderImage
+                                         success:^(NSURLRequest *request, NSHTTPURLResponse *response, UIImage *image) {
+                                             
+                                             [weakArtworkView setImage:image];
+                                             [blockSelf updateNowPlayingInfoArtwork];
+                                             
+                                         } failure:^(NSURLRequest *request, NSHTTPURLResponse *response, NSError *error) {
+                                             
+                                         }];
     }
+    
     if (self.songTableShowing)
 		[self.toggleButton setImage:self.artworkView.image forState:UIControlStateNormal];
-		
+    
 }
 
 -(void)updateViewForPlayerInfo
@@ -410,7 +427,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
     [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
     [self setUpAudioSession];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onAudioSessionEvent:) name:AVAudioSessionInterruptionNotification object:nil];
-	   
+    
     self.marqueeLabel.marqueeType = MLContinuous;
     self.marqueeLabel.animationDelay = 0.0f;
     self.marqueeLabel.fadeLength = 10.0f;
@@ -511,7 +528,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
     else {
         [self.parentViewController dismissViewControllerAnimated:YES completion:nil];
     }
-
+    
 }
 -(BOOL)songTableShowing {
     return [self.containerView.subviews.lastObject isEqual:self.songTableView];
@@ -899,6 +916,21 @@ static UAAudioPlayerController* _sharedInstance = nil;
     [playingInfoCenter setNowPlayingInfo:nowPlayingInfo];
 }
 
+/**
+ * Keeps the MPMediaItemPropertyArtwork properties in sync.
+ */
+-(void)updateNowPlayingInfoArtwork {
+    MPNowPlayingInfoCenter *playingInfoCenter = [MPNowPlayingInfoCenter defaultCenter];
+    NSMutableDictionary *nowPlayingInfo = [NSMutableDictionary dictionaryWithDictionary:playingInfoCenter.nowPlayingInfo];
+    
+    if (self.artworkView.image) {
+        MPMediaItemArtwork *albumArt = [[MPMediaItemArtwork alloc] initWithImage:self.artworkView.image];
+        [nowPlayingInfo setObject:albumArt forKey:MPMediaItemPropertyArtwork];
+    }
+    
+    [playingInfoCenter setNowPlayingInfo:nowPlayingInfo];
+}
+
 -(void)initNowPlayingInfoForNewTrack {
     
     if ([MPNowPlayingInfoCenter class] && [self.dataSource numberOfTracksInPlayer:self] > 0 ) {
@@ -912,7 +944,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
         [currentlyPlayingTrackInfo setObject:[NSNumber numberWithFloat:self.player.rate] forKey:MPNowPlayingInfoPropertyPlaybackRate];
         [currentlyPlayingTrackInfo setObject:[NSNumber numberWithFloat:self.player.currentTime.value / self.player.currentTime.timescale] forKey:MPNowPlayingInfoPropertyElapsedPlaybackTime];
         
-        if ([soundFile coverImage]) {
+        if (self.artworkView.image) {
             MPMediaItemArtwork *albumArt = [[MPMediaItemArtwork alloc] initWithImage:self.artworkView.image];
             [currentlyPlayingTrackInfo setObject:albumArt forKey:MPMediaItemPropertyArtwork];
         }
@@ -986,7 +1018,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
                 [self.player play];
                 break;
             default:
-                 NSLog(@"AVPlayerItemStatusUnknown");
+                NSLog(@"AVPlayerItemStatusUnknown");
                 break;
         }
         
