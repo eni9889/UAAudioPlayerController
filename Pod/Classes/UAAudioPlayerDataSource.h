@@ -49,6 +49,14 @@ typedef void(^UAAudioPlayerReceivingBlock)(UIImage* image, NSError** error);
 -(NSString*)musicPlayer:(UAAudioPlayerController*)player albumForTrack:(NSUInteger)trackNumber;
 
 /**
+ * Returns the artwork URL for the given track in the given UAAudioPlayerController.
+ * @param player the UAAudioPlayerController that is making this request.
+ * @param trackNumber the track number this request is for.
+ * @return A string to use as the album name of the track. If you return nil, this track will have no album name.
+ */
+-(NSURL*)musicPlayer:(UAAudioPlayerController*)player artworkURLForTrack:(NSUInteger)trackNumber;
+
+/**
  * Returns the length for the given track in the given UAAudioPlayerController. Your implementation must provide a 
  * value larger than 0.
  * @param player the UAAudioPlayerController that is making this request.

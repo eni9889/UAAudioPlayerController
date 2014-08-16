@@ -6,7 +6,7 @@
     <objects>
         <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="UAAudioPlayerController">
             <connections>
-                <outlet property="artworkView" destination="Y1N-an-ycn" id="NI4-uy-4cB"/>
+                <outlet property="artworkView" destination="SM7-r7-xm2" id="8ON-zE-r6i"/>
                 <outlet property="containerView" destination="rMN-Vc-Q2R" id="jzv-FU-1as"/>
                 <outlet property="currentTime" destination="yJ4-EA-tKU" id="J0l-fO-kO2"/>
                 <outlet property="itemDuration" destination="cZD-IR-SGo" id="DtH-Cs-Otl"/>
@@ -41,13 +41,10 @@
                                 <outlet property="delegate" destination="-1" id="9Ib-nk-uyX"/>
                             </connections>
                         </tableView>
-                        <button appearanceType="aqua" opaque="NO" userInteractionEnabled="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" adjustsImageWhenHighlighted="NO" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Y1N-an-ycn" userLabel="artworkView">
+                        <imageView appearanceType="aqua" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="SM7-r7-xm2" userLabel="artworkView">
                             <rect key="frame" x="0.0" y="0.0" width="320" height="320"/>
                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
-                            <state key="normal" image="AudioPlayerNoArtwork.png">
-                                <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
-                            </state>
-                        </button>
+                        </imageView>
                     </subviews>
                     <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
                 </view>
@@ -146,7 +143,6 @@
         </view>
     </objects>
     <resources>
-        <image name="AudioPlayerNoArtwork.png" width="320" height="320"/>
         <image name="player-backward.png" width="29" height="25"/>
         <image name="player-forward.png" width="29" height="25"/>
         <image name="player-pause.png" width="29" height="25"/>

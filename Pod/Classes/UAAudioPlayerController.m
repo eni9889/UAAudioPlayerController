@@ -72,6 +72,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
 @synthesize containerView;
 @synthesize overlayView;
 
+@synthesize selectedIndex = _selectedIndex;
 @synthesize interrupted;
 @synthesize repeatAll;
 @synthesize repeatOne;
@@ -103,7 +104,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
 -(instancetype)init {
     if (self = [self initWithNibName:@"UAAudioPlayerController" bundle:nil]) {
         
-        selectedIndex = 0;
+        _selectedIndex = 0;
         self.player = [[UAAVPlayer alloc] init];
         
         [[NSNotificationCenter defaultCenter] addObserver:self
@@ -130,26 +131,26 @@ static UAAudioPlayerController* _sharedInstance = nil;
         // Setup boundary time observer to trigger when audio really begins,
         // specifically after 1/3 of a second playback
         startObs = [self.player addBoundaryTimeObserverForTimes:
-               @[[NSValue valueWithCMTime:CMTimeMake(1, 3)]]
-                                                queue:NULL
-                                           usingBlock:^{
-                                               
-                                               // Raise a notificaiton when playback has started
-                                               [[NSNotificationCenter defaultCenter]
-                                                postNotificationName:@"PlaybackStartedNotification"
-                                                object:nil];
-
-                                           }];
+                    @[[NSValue valueWithCMTime:CMTimeMake(1, 3)]]
+                                                          queue:NULL
+                                                     usingBlock:^{
+                                                         
+                                                         // Raise a notificaiton when playback has started
+                                                         [[NSNotificationCenter defaultCenter]
+                                                          postNotificationName:@"PlaybackStartedNotification"
+                                                          object:nil];
+                                                         
+                                                     }];
         
         timeObs = [self.player addPeriodicTimeObserverForInterval:CMTimeMake(1, 1)
-                                                  queue:NULL
-                                             usingBlock:^(CMTime time) {
-                                                     CMTime endTime = CMTimeConvertScale (blockPlayer.currentItem.asset.duration, blockPlayer.currentTime.timescale, kCMTimeRoundingMethod_RoundHalfAwayFromZero);
-                                                     if (CMTimeCompare(endTime, kCMTimeZero) != 0) {
-                                                         [blockSelf syncScrubber];
-                                                     }
-                                                  }];
-
+                                                            queue:NULL
+                                                       usingBlock:^(CMTime time) {
+                                                           CMTime endTime = CMTimeConvertScale (blockPlayer.currentItem.asset.duration, blockPlayer.currentTime.timescale, kCMTimeRoundingMethod_RoundHalfAwayFromZero);
+                                                           if (CMTimeCompare(endTime, kCMTimeZero) != 0) {
+                                                               [blockSelf syncScrubber];
+                                                           }
+                                                       }];
+        
         
 		[self updateViewForPlayerInfo];
 		[self updateViewForPlayerState];
@@ -191,9 +192,9 @@ static UAAudioPlayerController* _sharedInstance = nil;
 
 - (void)updateViewForPlayerState
 {
-	NSString *title = [self.dataSource musicPlayer:self titleForTrack:selectedIndex];
-	NSString *artist = [self.dataSource musicPlayer:self artistForTrack:selectedIndex];
-	NSString *album = [self.dataSource musicPlayer:self albumForTrack:selectedIndex];
+	NSString *title = [self.dataSource musicPlayer:self titleForTrack:self.selectedIndex];
+	NSString *artist = [self.dataSource musicPlayer:self artistForTrack:self.selectedIndex];
+	NSString *album = [self.dataSource musicPlayer:self albumForTrack:self.selectedIndex];
     
     self.marqueeLabel.text = [NSString stringWithFormat:@"%@ - %@ - %@", title, artist, album];
 	
@@ -212,7 +213,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
 	if (![songTableView superview]) {
         NSLog(@"%s: %@ %lu",__func__,artworkView,artworkView.state);
         [self.artworkView setImage:nil forState:UIControlStateNormal];
-        UIImage *coverImage = [[self.dataSource audioTrackAtIndex:selectedIndex] coverImage];
+        UIImage *coverImage = [[self.dataSource audioTrackAtIndex:self.selectedIndex] coverImage];
 		[self.artworkView setImage:coverImage forState:UIControlStateNormal];
 	}
     
@@ -228,13 +229,13 @@ static UAAudioPlayerController* _sharedInstance = nil;
 
 -(void)updateViewForPlayerInfo
 {
-    float playerDuration = [[self.dataSource audioTrackAtIndex:selectedIndex] duration];
+    float playerDuration = [[self.dataSource audioTrackAtIndex:self.selectedIndex] duration];
     if (self.player.currentItem && !CMTIME_IS_INDEFINITE(self.player.currentItem.duration)) {
         playerDuration = self.player.currentItem.duration.value / self.player.currentItem.duration.timescale;
     }
     
     itemDuration.text = [NSString stringWithFormat:@"%d:%02d", (int)playerDuration / 60, (int)playerDuration % 60, nil];
-	indexLabel.text = [NSString stringWithFormat:@"%lu of %lu", (selectedIndex + 1), (unsigned long)[self.dataSource numberOfTracksInPlayer:self]];
+	indexLabel.text = [NSString stringWithFormat:@"%lu of %lu", (self.selectedIndex + 1), (unsigned long)[self.dataSource numberOfTracksInPlayer:self]];
     
     self.progressSlider.minimumValue = 0.0f;
 	self.progressSlider.maximumValue = playerDuration;
@@ -244,7 +245,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
     if ([self.dataSource numberOfTracksInPlayer:self]<=index)
         return;
     
-    self.selectedIndex = index;
+    _selectedIndex = index;
     self.player.volume = 1.0;
 	
 	for (UAAudioPlayerTableViewCell *cell in [songTableView visibleCells]) {
@@ -254,7 +255,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
 	UAAudioPlayerTableViewCell *cell = (UAAudioPlayerTableViewCell *)[songTableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:index inSection:0]];
 	cell.isSelectedIndex = YES;
     
-    [self playItemAtIndex:selectedIndex];
+    [self playItemAtIndex:self.selectedIndex];
     
 	[self updateViewForPlayerInfo];
 	[self updateViewForPlayerState];
@@ -358,8 +359,8 @@ static UAAudioPlayerController* _sharedInstance = nil;
     [self setUpAudioSession];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onAudioSessionEvent:) name:AVAudioSessionInterruptionNotification object:nil];
 	
-	UAAudioFile *selectedSong = [self.dataSource audioTrackAtIndex:selectedIndex];
-	self.title = [NSString stringWithFormat:@"%lu of %lu", selectedIndex + 1, (unsigned long)[self.dataSource numberOfTracksInPlayer:self]];
+	UAAudioFile *selectedSong = [self.dataSource audioTrackAtIndex:self.selectedIndex];
+	self.title = [NSString stringWithFormat:@"%lu of %lu", self.selectedIndex + 1, (unsigned long)[self.dataSource numberOfTracksInPlayer:self]];
     
     self.marqueeLabel.marqueeType = MLContinuous;
     self.marqueeLabel.animationDelay = 0.0f;
@@ -462,7 +463,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
     else {
         [self.parentViewController dismissViewControllerAnimated:YES completion:nil];
     }
-
+    
 }
 
 - (void)showSongFiles
@@ -548,7 +549,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
     if (repeatOne || repeatAll || shuffle) {
         return YES;
     }
-	else if (selectedIndex + 1 == [self.dataSource numberOfTracksInPlayer:self])
+	else if (self.selectedIndex + 1 == [self.dataSource numberOfTracksInPlayer:self])
 		return NO;
 	else
 		return YES;
@@ -556,7 +557,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
 
 - (BOOL)canGoToPreviousTrack
 {
-	if (selectedIndex == 0)
+	if (self.selectedIndex == 0)
 		return NO;
 	else
 		return YES;
@@ -566,9 +567,9 @@ static UAAudioPlayerController* _sharedInstance = nil;
 {
     if (self.player.currentItem == nil && [self.dataSource numberOfTracksInPlayer:self] > 0) {
         
-        [self playItemAtIndex:selectedIndex];
+        [self playItemAtIndex:self.selectedIndex];
         if ([_delegate respondsToSelector:@selector(musicPlayer:didChangeTrack:)]) {
-            [_delegate musicPlayer:self didChangeTrack:selectedIndex];
+            [_delegate musicPlayer:self didChangeTrack:self.selectedIndex];
         }
         
     } else if (self.player.playing == YES)  {
@@ -592,10 +593,10 @@ static UAAudioPlayerController* _sharedInstance = nil;
 
 - (void)previous
 {
-	NSUInteger newIndex = selectedIndex - 1;
-	selectedIndex = newIndex;
+	NSUInteger newIndex = self.selectedIndex - 1;
+	self.selectedIndex = newIndex;
     
-    [self playItemAtIndex:selectedIndex];
+    [self playItemAtIndex:self.selectedIndex];
 	
 	[self updateViewForPlayerInfo];
 	[self updateViewForPlayerState];
@@ -609,21 +610,21 @@ static UAAudioPlayerController* _sharedInstance = nil;
 		newIndex = rand() % [self.dataSource numberOfTracksInPlayer:self];
 	}
 	else if (repeatOne) {
-		newIndex = selectedIndex;
+		newIndex = self.selectedIndex;
 	}
 	else if (repeatAll) {
-		if (selectedIndex + 1 == [self.dataSource numberOfTracksInPlayer:self])
+		if (self.selectedIndex + 1 == [self.dataSource numberOfTracksInPlayer:self])
 			newIndex = 0;
 		else
-			newIndex = selectedIndex + 1;
+			newIndex = self.selectedIndex + 1;
 	}
 	else{
-		newIndex = selectedIndex + 1;
+		newIndex = self.selectedIndex + 1;
 	}
 	
-	selectedIndex = newIndex;
+	self.selectedIndex = newIndex;
     
-    [self playItemAtIndex:selectedIndex];
+    [self playItemAtIndex:self.selectedIndex];
 }
 
 -(void)playItemAtIndex:(NSUInteger)aSelectedIndex {
@@ -632,7 +633,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
         [_delegate musicPlayerDidStopPlaying:self];
     }
     
-    AVPlayerItem *newItem = [[AVPlayerItem alloc] initWithURL:[[self.dataSource audioTrackAtIndex:selectedIndex] filePath]];
+    AVPlayerItem *newItem = [[AVPlayerItem alloc] initWithURL:[[self.dataSource audioTrackAtIndex:self.selectedIndex] filePath]];
     [self.player replaceCurrentItemWithPlayerItem:newItem];
     [self.player play];
     
@@ -744,7 +745,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
     
 	cell.isEven = indexPath.row % 2;
 	
-	if (selectedIndex == indexPath.row)
+	if (self.selectedIndex == indexPath.row)
 		cell.isSelectedIndex = YES;
 	else
 		cell.isSelectedIndex = NO;
@@ -756,7 +757,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
 - (void)tableView:(UITableView *)aTableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
 	[aTableView deselectRowAtIndexPath:indexPath animated:YES];
 	
-	selectedIndex = indexPath.row;
+	self.selectedIndex = indexPath.row;
 	
 	for (UAAudioPlayerTableViewCell *cell in [aTableView visibleCells]) {
 		cell.isSelectedIndex = NO;
@@ -765,7 +766,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
 	UAAudioPlayerTableViewCell *cell = (UAAudioPlayerTableViewCell *)[aTableView cellForRowAtIndexPath:indexPath];
 	cell.isSelectedIndex = YES;
 	
-    [self playItemAtIndex:selectedIndex];
+    [self playItemAtIndex:self.selectedIndex];
 	
 	[self updateViewForPlayerInfo];
 	[self updateViewForPlayerState];
@@ -847,7 +848,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
     
     if ([MPNowPlayingInfoCenter class] && [self.dataSource numberOfTracksInPlayer:self] > 0 ) {
         /* we're on iOS 5, so set up the now playing center */
-        UAAudioFile *soundFile = [self.dataSource audioTrackAtIndex:selectedIndex];
+        UAAudioFile *soundFile = [self.dataSource audioTrackAtIndex:self.selectedIndex];
         
         NSMutableDictionary *currentlyPlayingTrackInfo = [NSMutableDictionary dictionary];
         [currentlyPlayingTrackInfo setObject:[soundFile title] forKey:MPMediaItemPropertyTitle];
@@ -930,7 +931,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
                 [self.player play];
                 break;
             default:
-                 NSLog(@"AVPlayerItemStatusUnknown");
+                NSLog(@"AVPlayerItemStatusUnknown");
                 break;
         }
         

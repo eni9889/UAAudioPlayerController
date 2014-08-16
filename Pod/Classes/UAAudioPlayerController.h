@@ -22,7 +22,6 @@
 @interface UAAudioPlayerController : UIViewController <AVAudioPlayerDelegate, UITableViewDelegate, UITableViewDataSource>
 {
 	NSString			*soundFilesPath;
-	NSUInteger			selectedIndex;
     
 	CAGradientLayer		*gradientLayer;
 	
@@ -66,12 +65,13 @@
 
 @property (nonatomic, strong) IBOutlet UISlider *progressSlider;
 @property (nonatomic, strong) IBOutlet UITableView *songTableView;
-@property (nonatomic, strong) IBOutlet UIButton *artworkView;
+@property (nonatomic, strong) IBOutlet UIImageView *artworkView;
 @property (nonatomic, strong) IBOutlet UIView *containerView;
 @property (nonatomic, strong) IBOutlet MPVolumeView *volumeSlider;
 
 @property (nonatomic, retain) UIView *overlayView;
 
+@property (nonatomic, assign) NSUInteger selectedIndex;
 @property (nonatomic, assign) BOOL interrupted;
 @property (nonatomic, assign) BOOL repeatAll;
 @property (nonatomic, assign) BOOL repeatOne;
