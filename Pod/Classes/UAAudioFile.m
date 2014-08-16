@@ -177,11 +177,9 @@
 	return [NSString stringWithFormat:@"%d:%02d", (int)[self duration] / 60, (int)[self duration] % 60, nil];
 }
 
-- (UIImage *)coverImage
-{
-    if (_coverImage == nil)
-    {
-        _coverImage = [UIImage imageNamed:@"AudioPlayerNoArtwork.png"];
+- (UIImage *)coverImage {
+    if (_coverImage == nil) {
+        _coverImage = [UIImage imageNamed:@"AudioPlayerNoArtwork"];
     }
 	return _coverImage;
 }

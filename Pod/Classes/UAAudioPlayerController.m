@@ -185,6 +185,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
         
         NSString *current = [NSString stringWithFormat:@"%d:%02d", (int) (self.player.currentTime.value/self.player.currentTime.timescale) / 60, (int) (self.player.currentTime.value/self.player.currentTime.timescale) % 60, nil];
         currentTime.text = current;
+        [self updateNowPlayingInfoPlaybackTime];
     }
 }
 
@@ -223,24 +224,6 @@ static UAAudioPlayerController* _sharedInstance = nil;
 		nextButton.enabled = [self canGoToNextTrack];
 	previousButton.enabled = [self canGoToPreviousTrack];
     
-    if ([MPNowPlayingInfoCenter class] && [self.dataSource numberOfTracksInPlayer:self] >0 )
-    {
-        /* we're on iOS 5, so set up the now playing center */
-        UAAudioFile *soundFile = [self.dataSource audioTrackAtIndex:selectedIndex];
-        
-        NSMutableDictionary *currentlyPlayingTrackInfo = [NSMutableDictionary dictionary];
-        [currentlyPlayingTrackInfo setObject:[soundFile title] forKey:MPMediaItemPropertyTitle];
-        [currentlyPlayingTrackInfo setObject:[soundFile artist] forKey:MPMediaItemPropertyArtist];
-        [currentlyPlayingTrackInfo setObject:[NSNumber numberWithFloat:[soundFile duration]] forKey:MPMediaItemPropertyPlaybackDuration];
-        [currentlyPlayingTrackInfo setObject:[NSNumber numberWithInt:1] forKey:MPNowPlayingInfoPropertyPlaybackRate];
-        
-        if ([[self.dataSource audioTrackAtIndex:selectedIndex] coverImage]) {
-            MPMediaItemArtwork *albumArt = [[MPMediaItemArtwork alloc] initWithImage:[soundFile coverImage]];
-            [currentlyPlayingTrackInfo setObject:albumArt forKey:MPMediaItemPropertyArtwork];
-        }
-        
-        [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = currentlyPlayingTrackInfo;
-    }
 }
 
 -(void)updateViewForPlayerInfo
@@ -659,6 +642,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
     
     [self updateViewForPlayerInfo];
 	[self updateViewForPlayerState];
+    [self initNowPlayingInfoForNewTrack];
 }
 
 - (void)volumeSliderMoved:(UISlider *)sender
@@ -815,6 +799,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
 - (void)beginSeekingForward
 {
     [self.player setRate:2.0f];
+    [self updateNowPlayingInfoPlaybackRate:@(2.0f)];
 }
 
 - (void)beginSeekingBackward
@@ -826,6 +811,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
 - (void)endSeeking
 {
     [self play];
+    [self updateNowPlayingInfoPlaybackRate:@(1.0f)];
 }
 
 - (void)seekToBeginning
@@ -843,8 +829,40 @@ static UAAudioPlayerController* _sharedInstance = nil;
     MPNowPlayingInfoCenter *playingInfoCenter = [MPNowPlayingInfoCenter defaultCenter];
     NSMutableDictionary *nowPlayingInfo = [NSMutableDictionary dictionaryWithDictionary:playingInfoCenter.nowPlayingInfo];
     [nowPlayingInfo setObject:playbackRate forKey:MPNowPlayingInfoPropertyPlaybackRate];
+    [playingInfoCenter setNowPlayingInfo:nowPlayingInfo];
+}
+
+/**
+ * Keeps the MPNowPlayingInfoPropertyElapsedPlaybackTime properties in sync.
+ */
+- (void)updateNowPlayingInfoPlaybackTime
+{
+    MPNowPlayingInfoCenter *playingInfoCenter = [MPNowPlayingInfoCenter defaultCenter];
+    NSMutableDictionary *nowPlayingInfo = [NSMutableDictionary dictionaryWithDictionary:playingInfoCenter.nowPlayingInfo];
     [nowPlayingInfo setObject:@(self.player.currentTime.value / self.player.currentTime.timescale) forKey:MPNowPlayingInfoPropertyElapsedPlaybackTime];
     [playingInfoCenter setNowPlayingInfo:nowPlayingInfo];
+}
+
+-(void)initNowPlayingInfoForNewTrack {
+    
+    if ([MPNowPlayingInfoCenter class] && [self.dataSource numberOfTracksInPlayer:self] > 0 ) {
+        /* we're on iOS 5, so set up the now playing center */
+        UAAudioFile *soundFile = [self.dataSource audioTrackAtIndex:selectedIndex];
+        
+        NSMutableDictionary *currentlyPlayingTrackInfo = [NSMutableDictionary dictionary];
+        [currentlyPlayingTrackInfo setObject:[soundFile title] forKey:MPMediaItemPropertyTitle];
+        [currentlyPlayingTrackInfo setObject:[soundFile artist] forKey:MPMediaItemPropertyArtist];
+        [currentlyPlayingTrackInfo setObject:[NSNumber numberWithFloat:[soundFile duration]] forKey:MPMediaItemPropertyPlaybackDuration];
+        [currentlyPlayingTrackInfo setObject:[NSNumber numberWithFloat:self.player.rate] forKey:MPNowPlayingInfoPropertyPlaybackRate];
+        [currentlyPlayingTrackInfo setObject:[NSNumber numberWithFloat:self.player.currentTime.value / self.player.currentTime.timescale] forKey:MPNowPlayingInfoPropertyElapsedPlaybackTime];
+        
+        if ([soundFile coverImage]) {
+            MPMediaItemArtwork *albumArt = [[MPMediaItemArtwork alloc] initWithImage:[soundFile coverImage]];
+            [currentlyPlayingTrackInfo setObject:albumArt forKey:MPMediaItemPropertyArtwork];
+        }
+        
+        [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = currentlyPlayingTrackInfo;
+    }
 }
 
 //Make sure we can recieve remote control events
@@ -897,40 +915,25 @@ static UAAudioPlayerController* _sharedInstance = nil;
     }
 }
 
-#pragma mark - AudioPlayer
+#pragma mark - AudioPlayer KVO
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
     NSLog(@"%s: %@ change: %@", __func__, keyPath, change);
     
     if (object == self.player && [keyPath isEqualToString:@"status"]) {
-        if (self.player.status == AVPlayerStatusFailed) {
-            NSLog(@"AVPlayer Failed");
-            
-        } else if (self.player.status == AVPlayerStatusReadyToPlay) {
-            NSLog(@"AVPlayerStatusReadyToPlay");
-            
-            [self.player play];
-            
-        } else if (self.player.status == AVPlayerItemStatusUnknown) {
-            NSLog(@"AVPlayer Unknown");
-            
+        
+        switch (self.player.status) {
+            case AVPlayerStatusFailed:
+                NSLog(@"AVPlayerStatusFailed");
+                break;
+            case AVPlayerStatusReadyToPlay:
+                NSLog(@"AVPlayerStatusReadyToPlay");
+                [self.player play];
+                break;
+            default:
+                 NSLog(@"AVPlayerItemStatusUnknown");
+                break;
         }
         
-        [self updateViewForPlayerInfo];
-		[self updateViewForPlayerState];
-    } else if ([keyPath isEqualToString:@"rate"]) {
-        if ([self.player rate])
-            NSLog(@"Playing");
-        else
-            NSLog(@"Paused");
-        
-        [self updateViewForPlayerInfo];
-		[self updateViewForPlayerState];
-    } else if ([keyPath isEqualToString:@"currentItem.duration"]) {
-        NSLog(@"Got duration: %f", self.player.duration);
-        
-        [self updateViewForPlayerInfo];
-		[self updateViewForPlayerState];
-    } else if ([keyPath isEqualToString:@"currentTime"]) {
         [self updateViewForPlayerInfo];
 		[self updateViewForPlayerState];
     }
