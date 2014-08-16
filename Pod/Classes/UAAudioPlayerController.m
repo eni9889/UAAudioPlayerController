@@ -913,7 +913,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
         [currentlyPlayingTrackInfo setObject:[NSNumber numberWithFloat:self.player.currentTime.value / self.player.currentTime.timescale] forKey:MPNowPlayingInfoPropertyElapsedPlaybackTime];
         
         if ([soundFile coverImage]) {
-            MPMediaItemArtwork *albumArt = [[MPMediaItemArtwork alloc] initWithImage:[soundFile coverImage]];
+            MPMediaItemArtwork *albumArt = [[MPMediaItemArtwork alloc] initWithImage:self.artworkView.image];
             [currentlyPlayingTrackInfo setObject:albumArt forKey:MPMediaItemPropertyArtwork];
         }
         
