@@ -22,7 +22,7 @@
 	// Do any additional setup after loading the view, typically from a nib.
     UAAudioPlayerController *audioPlayer = [[UAAudioPlayerController alloc] initWithDelegate:self
                                                                                   dataSource:self];
-	[self.navigationController pushViewController:audioPlayer animated:YES];
+	[self presentViewController:[[UINavigationController alloc] initWithRootViewController:audioPlayer] animated:YES completion:nil];
 }
 
 /**

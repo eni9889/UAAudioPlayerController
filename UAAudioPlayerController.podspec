@@ -33,4 +33,5 @@ Pod::Spec.new do |s|
   s.public_header_files = 'Pod/Classes/**/*.h'
   s.frameworks = 'UIKit', 'AudioToolbox', 'MediaPlayer', 'QuartzCore', 'AVFoundation'
   s.dependency 'MarqueeLabel', '~> 2.0.1'
+  s.dependency 'AFNetworking', '~> 2.0'
 end
