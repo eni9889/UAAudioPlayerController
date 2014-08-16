@@ -1,0 +1,1 @@
+../../../../Pod/Classes/UAAudioPlayerTableViewCell2.h

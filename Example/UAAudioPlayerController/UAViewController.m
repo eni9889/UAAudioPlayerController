@@ -56,6 +56,10 @@
     return @"Electronic";
 }
 
+-(NSURL*)musicPlayer:(UAAudioPlayerController*)player artworkURLForTrack:(NSUInteger)trackNumber {
+    return nil;
+}
+
 -(NSInteger)numberOfTracksInPlayer:(UAAudioPlayerController*)player {
     return 3;
 }

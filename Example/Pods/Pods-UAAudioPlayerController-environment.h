@@ -54,6 +54,12 @@
 #define COCOAPODS_VERSION_MINOR_MarqueeLabel 0
 #define COCOAPODS_VERSION_PATCH_MarqueeLabel 1
 
+// NAKPlaybackIndicatorView
+#define COCOAPODS_POD_AVAILABLE_NAKPlaybackIndicatorView
+#define COCOAPODS_VERSION_MAJOR_NAKPlaybackIndicatorView 0
+#define COCOAPODS_VERSION_MINOR_NAKPlaybackIndicatorView 0
+#define COCOAPODS_VERSION_PATCH_NAKPlaybackIndicatorView 3
+
 // UAAudioPlayerController
 #define COCOAPODS_POD_AVAILABLE_UAAudioPlayerController
 #define COCOAPODS_VERSION_MAJOR_UAAudioPlayerController 0

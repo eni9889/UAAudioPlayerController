@@ -26,10 +26,12 @@ PODS:
     - FBSnapshotTestCase
   - FBSnapshotTestCase (1.1)
   - MarqueeLabel (2.0.1)
+  - NAKPlaybackIndicatorView (0.0.3)
   - Specta (0.2.1)
   - UAAudioPlayerController (0.1.0):
     - AFNetworking (~> 2.0)
     - MarqueeLabel (~> 2.0.1)
+    - NAKPlaybackIndicatorView (~> 0.0.3)
 
 DEPENDENCIES:
   - Expecta
@@ -48,7 +50,8 @@ SPEC CHECKSUMS:
   Expecta+Snapshots: 30c28e3d8104665ee70e32df1cfc030bb37a8a6c
   FBSnapshotTestCase: 9053afee1d66b4c7c313fcb0ae582a5e47bea9d0
   MarqueeLabel: efe4c245fe903725954a781edc0da04a110b36c5
+  NAKPlaybackIndicatorView: 3211fff8fbc229661d4de69e86cef1b9b2e49e41
   Specta: 9141310f46b1f68b676650ff2854e1ed0b74163a
-  UAAudioPlayerController: a50294c133b316ba2d621f7f9ab4b123f9977082
+  UAAudioPlayerController: 28df2ef8de5c69a2063727483a768f783081017e
 
 COCOAPODS: 0.33.1

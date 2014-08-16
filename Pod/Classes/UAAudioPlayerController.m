@@ -772,21 +772,27 @@ static UAAudioPlayerController* _sharedInstance = nil;
     static NSString *CellIdentifier = @"Cell";
     
     UAAudioPlayerTableViewCell *cell = (UAAudioPlayerTableViewCell *)[aTableView dequeueReusableCellWithIdentifier:CellIdentifier];
-	if (cell == nil)
-	{
-		cell = [[UAAudioPlayerTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
+	if (cell == nil) {
+		cell = [[UAAudioPlayerTableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:CellIdentifier];
 	}
-	
-	cell.title = [self.dataSource musicPlayer:self titleForTrack:indexPath.row];
-	cell.number = [NSString stringWithFormat:@"%ld.", (indexPath.row + 1)];
-	cell.duration = [[self.dataSource audioTrackAtIndex:indexPath.row] durationInMinutes];
     
-	cell.isEven = indexPath.row % 2;
+    NSURL *artworkURL = [self.dataSource musicPlayer:self artworkURLForTrack:indexPath.row];
+    [[cell imageView] setImageWithURL:artworkURL  placeholderImage:[UIImage imageNamed:@"AudioPlayerNoArtwork"]];
 	
+	cell.textLabel.text = [self.dataSource musicPlayer:self titleForTrack:indexPath.row];
+    cell.detailTextLabel.text = [self.dataSource musicPlayer:self artistForTrack:indexPath.row];
+    
+    
 	if (self.selectedIndex == indexPath.row)
 		cell.isSelectedIndex = YES;
 	else
 		cell.isSelectedIndex = NO;
+    
+    if (self.selectedIndex == indexPath.row) {
+        self.player.playing ? [cell setTrackState:NAKPlaybackIndicatorViewStatePlaying] : [cell setTrackState:NAKPlaybackIndicatorViewStatePaused];
+    } else {
+        [cell setTrackState:NAKPlaybackIndicatorViewStateStopped];
+    }
 	
 	return cell;
 }

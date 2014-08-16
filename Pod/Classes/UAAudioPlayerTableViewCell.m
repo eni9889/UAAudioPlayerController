@@ -1,144 +1,102 @@
+// SpotTableViewCell.m
 //
-//  MDAudioPlayerTableViewCell.m
-//  MDAudioPlayerSample
-//
-//  Created by Matt Donnelly on 04/08/2010.
-//  Copyright 2010 Matt Donnelly. All rights reserved.
-//
+// Copyright (c) 2011 Gowalla (http://gowalla.com/)
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 
 #import "UAAudioPlayerTableViewCell.h"
 
-
-@interface MDTableViewCellView : UIView
-
-@property (nonatomic, weak) UAAudioPlayerTableViewCell *parent;
-
+@interface UAAudioPlayerTableViewCell ()
+@property (nonatomic, strong)  NAKPlaybackIndicatorView *indicator;
 @end
-
-@implementation MDTableViewCellView
-
-- (void)drawRect:(CGRect)r
-{
-    [_parent drawContentView:r];
-}
-
-@end
-
 
 @implementation UAAudioPlayerTableViewCell
-
-@synthesize title;
-@synthesize number;
-@synthesize duration;
-@synthesize isEven;
+@synthesize indicator = _indicator;
 @synthesize isSelectedIndex;
 
-static UIFont *textFont = nil;
-
-+ (void)initialize
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier 
 {
-	if (self == [UAAudioPlayerTableViewCell class])
-	{
-		textFont = [UIFont boldSystemFontOfSize:15];
-	}
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (!self) {
+        return nil; 
+    }
+    
+    [self setBackgroundColor:[UIColor clearColor]];
+    
+    self.imageView.backgroundColor = self.backgroundColor;
+    self.imageView.contentMode = UIViewContentModeScaleAspectFit;
+    [self.imageView setImage:[UIImage imageNamed:@"noAtwork.png"]];
+    
+    self.indicator = [[NAKPlaybackIndicatorView alloc] initWithFrame:CGRectZero];
+    
+    [self.imageView addSubview:self.indicator];
+    [self.indicator sizeToFit];
+    self.indicator.state = NAKPlaybackIndicatorViewStateStopped;
+    
+    return self;
 }
 
-- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
-{
-	if (self = [super initWithStyle:style reuseIdentifier:reuseIdentifier]) 
-	{
-		contentView = [[MDTableViewCellView alloc] initWithFrame:CGRectZero];
-        ((MDTableViewCellView*)contentView).parent = self;
-		contentView.opaque = NO;
-		[self addSubview:contentView];
-	}
-	
-	return self;
+- (void)setTrackState:(NAKPlaybackIndicatorViewState)state {
+    self.indicator.state = state;
 }
 
-- (void)setTitle:(NSString *)s
+- (void)dealloc 
 {
-    title = s;
-	[self setNeedsDisplay]; 
+    self.imageView.image = nil;
+    self.textLabel.text = nil;
+    self.detailTextLabel.text = nil;
+    
 }
 
-- (void)setNumber:(NSString *)s
+#pragma mark - UITableViewCell
+
+- (void)prepareForReuse 
 {
-    number = s;
-	[self setNeedsDisplay]; 
+    [super prepareForReuse];
+    self.textLabel.text = nil;
+    self.detailTextLabel.text = nil;
 }
 
-- (void)setDuration:(NSString *)s
-{
-    duration = s;
-	[self setNeedsDisplay]; 
-}
+#pragma mark - UIView
 
-- (void)setIsSelectedIndex:(BOOL)flag
+- (void)layoutSubviews 
 {
-	isSelectedIndex = flag;
-	[self setNeedsDisplay];
-}
-
-- (void)setFrame:(CGRect)f
-{
-	[super setFrame:f];
-	[contentView setFrame:[self bounds]];
-}
-
-- (void)setNeedsDisplay
-{
-	[super setNeedsDisplay];
-	[contentView setNeedsDisplay];
-}
-
-- (void)drawContentView:(CGRect)r
-{
-	CGContextRef context = UIGraphicsGetCurrentContext();
-	
-	UIColor *bgColor;
-	
-	if (self.highlighted)
-		bgColor = [UIColor clearColor];
-	else
-		bgColor = self.isEven ? [UIColor colorWithWhite:0.0 alpha:0.25] : [UIColor colorWithWhite:0.0 alpha:0.50];
-	
-	UIColor *textColor = [UIColor whiteColor];
-	UIColor *dividerColor = self.highlighted ? [UIColor clearColor] : [UIColor colorWithRed:0.986 green:0.933 blue:0.994 alpha:0.13];
-	
-	[bgColor set];
-	CGContextFillRect(context, r);
-	
-	[textColor set];
-	
-	[title drawInRect:CGRectMake(75, 12, 185, 15) withFont:textFont lineBreakMode:NSLineBreakByTruncatingTail];
-	[number drawInRect:CGRectMake(5, 12, 35, 15) withFont:textFont lineBreakMode:NSLineBreakByTruncatingTail];
-	[duration drawInRect:CGRectMake(270, 12, 45, 15) withFont:textFont lineBreakMode:NSLineBreakByTruncatingTail alignment:NSTextAlignmentRight];
-	
-	[dividerColor set];
-	
-	CGContextSetLineWidth(context, 0.5);
-	
-	CGContextMoveToPoint(context, 63.5, 0.0);
-	CGContextAddLineToPoint(context, 63.5, r.size.height);
-	
-	CGContextMoveToPoint(context, 260.5, 0.0);
-	CGContextAddLineToPoint(context, 260.5, r.size.height);
-	
-	CGContextStrokePath(context);
-	
-	if (self.isSelectedIndex)
-	{		
-		[self.highlighted ? [UIColor whiteColor] : [UIColor colorWithRed:0.090 green:0.274 blue:0.873 alpha:1.000] set];
-		
-		CGContextMoveToPoint(context, 45, 17);
-		CGContextAddLineToPoint(context, 45, 27);
-		CGContextAddLineToPoint(context, 55, 22);
-		
-		CGContextClosePath(context);
-		
-		CGContextFillPath(context);
-	}
+    [super layoutSubviews];
+    CGRect imageViewFrame = self.imageView.frame;
+    imageViewFrame.origin = CGPointMake(5.0f, 1.0f);
+    imageViewFrame.size = CGSizeMake(47.5f, 48.0f);
+    self.imageView.frame = imageViewFrame;
+    
+    CGRect textLabelFrame = self.textLabel.frame;
+    CGRect detailTextLabelFrame = self.detailTextLabel.frame;
+    
+    textLabelFrame.origin.x = 64.00f;
+    detailTextLabelFrame.origin.x = 64.00f;
+    
+    self.textLabel.frame = textLabelFrame;
+    self.detailTextLabel.frame = detailTextLabelFrame;
+    
+    CGRect indicatorFrame = [self.indicator frame];
+    indicatorFrame.origin.x = (self.imageView.frame.size.width - indicatorFrame.size.width) / 2.0f;
+    indicatorFrame.origin.y = (self.imageView.frame.size.height - indicatorFrame.size.height) / 2.0f;
+    self.indicator.frame = indicatorFrame;
+    
 }
 
 @end

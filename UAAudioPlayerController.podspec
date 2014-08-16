@@ -34,4 +34,5 @@ Pod::Spec.new do |s|
   s.frameworks = 'UIKit', 'AudioToolbox', 'MediaPlayer', 'QuartzCore', 'AVFoundation'
   s.dependency 'MarqueeLabel', '~> 2.0.1'
   s.dependency 'AFNetworking', '~> 2.0'
+  s.dependency 'NAKPlaybackIndicatorView', '~> 0.0.3'
 end
