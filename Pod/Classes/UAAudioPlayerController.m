@@ -564,6 +564,9 @@ static UAAudioPlayerController* _sharedInstance = nil;
 	}
 	
 	[UIView commitAnimations];
+    
+    [self.songTableView scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:self.selectedIndex inSection:0]
+                              atScrollPosition:UITableViewScrollPositionNone animated:YES];
 }
 
 - (void)toggleShuffle
@@ -711,6 +714,8 @@ static UAAudioPlayerController* _sharedInstance = nil;
     if([_delegate respondsToSelector:@selector(musicPlayerDidStartPlaying:)]) {
         [_delegate musicPlayerDidStartPlaying:self];
     }
+    
+    [self.songTableView scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:aSelectedIndex inSection:0] atScrollPosition:UITableViewScrollPositionNone animated:YES];
     
     [self updateViewForPlayerInfo];
 	[self updateViewForPlayerState];
