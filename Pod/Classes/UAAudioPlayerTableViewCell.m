@@ -1,17 +1,17 @@
 // SpotTableViewCell.m
 //
 // Copyright (c) 2011 Gowalla (http://gowalla.com/)
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -30,11 +30,11 @@
 @synthesize indicator = _indicator;
 @synthesize isSelectedIndex;
 
-- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier 
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
 {
     self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
     if (!self) {
-        return nil; 
+        return nil;
     }
     
     [self setBackgroundColor:[UIColor clearColor]];
@@ -45,7 +45,7 @@
     
     self.indicator = [[NAKPlaybackIndicatorView alloc] initWithFrame:CGRectZero];
     
-    [self.imageView addSubview:self.indicator];
+    self.accessoryView = self.indicator;
     [self.indicator sizeToFit];
     self.indicator.state = NAKPlaybackIndicatorViewStateStopped;
     
@@ -56,7 +56,7 @@
     self.indicator.state = state;
 }
 
-- (void)dealloc 
+- (void)dealloc
 {
     self.imageView.image = nil;
     self.textLabel.text = nil;
@@ -66,7 +66,7 @@
 
 #pragma mark - UITableViewCell
 
-- (void)prepareForReuse 
+- (void)prepareForReuse
 {
     [super prepareForReuse];
     self.textLabel.text = nil;
@@ -75,7 +75,7 @@
 
 #pragma mark - UIView
 
-- (void)layoutSubviews 
+- (void)layoutSubviews
 {
     [super layoutSubviews];
     CGRect imageViewFrame = self.imageView.frame;
@@ -91,11 +91,6 @@
     
     self.textLabel.frame = textLabelFrame;
     self.detailTextLabel.frame = detailTextLabelFrame;
-    
-    CGRect indicatorFrame = [self.indicator frame];
-    indicatorFrame.origin.x = (self.imageView.frame.size.width - indicatorFrame.size.width) / 2.0f;
-    indicatorFrame.origin.y = (self.imageView.frame.size.height - indicatorFrame.size.height) / 2.0f;
-    self.indicator.frame = indicatorFrame;
     
 }
 
