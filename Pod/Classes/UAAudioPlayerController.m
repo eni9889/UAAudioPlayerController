@@ -411,12 +411,6 @@ static UAAudioPlayerController* _sharedInstance = nil;
     
 	self.view.backgroundColor = [UIColor whiteColor];
     
-    // Add a bottomBorder.
-    CALayer *bottomBorder = [CALayer layer];
-    bottomBorder.frame = CGRectMake(0.0f, self.containerView.frame.size.height - 1.0f, self.containerView.frame.size.width, 1.0f);
-    bottomBorder.backgroundColor = [UIColor colorWithWhite:0.8f alpha:1.0f].CGColor;
-    [self.containerView.layer addSublayer:bottomBorder];
-    
 	self.toggleButton = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 30, 30)];
 	[toggleButton setImage:[UIImage imageNamed:@"player-playlist"] forState:UIControlStateNormal];
 	[toggleButton addTarget:self action:@selector(showSongFiles) forControlEvents:UIControlEventTouchUpInside];
@@ -531,7 +525,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
     
 }
 -(BOOL)songTableShowing {
-    return [self.containerView.subviews.lastObject isEqual:self.songTableView];
+    return [[self.containerView.subviews objectAtIndex:1] isEqual:self.songTableView];
 }
 
 - (void)showSongFiles
