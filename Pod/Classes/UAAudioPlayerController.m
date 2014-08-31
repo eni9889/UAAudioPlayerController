@@ -61,6 +61,8 @@
 @end
 
 @interface UAAudioPlayerController ()
+@property (nonatomic, strong) id startObs;
+@property (nonatomic, strong) id timeObs;
 @end
 
 void interruptionListenerCallback (void *userData, UInt32 interruptionState);
@@ -129,57 +131,107 @@ static UAAudioPlayerController* _sharedInstance = nil;
     if (self = [self initWithNibName:@"UAAudioPlayerController" bundle:nil]) {
         
         _selectedIndex = 0;
-        self.player = [[UAAVPlayer alloc] init];
         
-        [[NSNotificationCenter defaultCenter] addObserver:self
-                                                 selector:@selector(playerItemDidReachEnd:)
-                                                     name:AVPlayerItemDidPlayToEndTimeNotification
-                                                   object:[self.player currentItem]];
+        [self initializePlayer];
         
-        [[NSNotificationCenter defaultCenter] addObserver:self
-                                                 selector:@selector(playerItemDidStartPlaying:)
-                                                     name:@"PlaybackStartedNotification"
-                                                   object:[self.player currentItem]];
-        
-        [self.player addObserver:self forKeyPath:@"status" options:NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew context:nil];
-        [self.player addObserver:self forKeyPath:@"rate" options: NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew context:nil];
-        [self.player addObserver:self forKeyPath:@"currentItem.duration" options: NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew context:nil];
-        
-        // Declare block scope variables to avoid retention cycles
-        // from references inside the block
-        __block UAAudioPlayerController *blockSelf = self;
-        __block UAAVPlayer* blockPlayer = self.player;
-        __block id startObs;
-        __block id timeObs;
-        
-        // Setup boundary time observer to trigger when audio really begins,
-        // specifically after 1/3 of a second playback
-        startObs = [self.player addBoundaryTimeObserverForTimes:
-                    @[[NSValue valueWithCMTime:CMTimeMake(1, 3)]]
-                                                          queue:NULL
-                                                     usingBlock:^{
-                                                         
-                                                         // Raise a notificaiton when playback has started
-                                                         [[NSNotificationCenter defaultCenter]
-                                                          postNotificationName:@"PlaybackStartedNotification"
-                                                          object:nil];
-                                                         
-                                                     }];
-        
-        timeObs = [self.player addPeriodicTimeObserverForInterval:CMTimeMake(1, 1)
-                                                            queue:NULL
-                                                       usingBlock:^(CMTime time) {
-                                                           CMTime endTime = CMTimeConvertScale (blockPlayer.currentItem.asset.duration, blockPlayer.currentTime.timescale, kCMTimeRoundingMethod_RoundHalfAwayFromZero);
-                                                           if (CMTimeCompare(endTime, kCMTimeZero) != 0) {
-                                                               [blockSelf syncScrubber];
-                                                           }
-                                                       }];
-        
-        
-		[self updateViewForPlayerInfo];
-		[self updateViewForPlayerState];
+        [self updateViewForPlayerInfo];
+        [self updateViewForPlayerState];
     }
     return self;
+}
+
+-(void)initializePlayer {
+    
+    self.player = [[UAAVPlayer alloc] init];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(playerItemDidReachEnd:)
+                                                 name:AVPlayerItemDidPlayToEndTimeNotification
+                                               object:[self.player currentItem]];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(playerItemDidStartPlaying:)
+                                                 name:@"PlaybackStartedNotification"
+                                               object:[self.player currentItem]];
+    
+    [self.player addObserver:self forKeyPath:@"status" options:NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew context:nil];
+    [self.player addObserver:self forKeyPath:@"rate" options: NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew context:nil];
+    [self.player addObserver:self forKeyPath:@"currentItem.duration" options: NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew context:nil];
+    
+    // Declare block scope variables to avoid retention cycles
+    // from references inside the block
+    __block UAAudioPlayerController *blockSelf = self;
+    __block UAAVPlayer* blockPlayer = self.player;
+    
+    // Setup boundary time observer to trigger when audio really begins,
+    // specifically after 1/3 of a second playback
+    _startObs = [self.player addBoundaryTimeObserverForTimes:
+                @[[NSValue valueWithCMTime:CMTimeMake(1, 3)]]
+                                                      queue:NULL
+                                                 usingBlock:^{
+                                                     
+                                                     // Raise a notificaiton when playback has started
+                                                     [[NSNotificationCenter defaultCenter]
+                                                      postNotificationName:@"PlaybackStartedNotification"
+                                                      object:nil];
+                                                     
+                                                 }];
+    
+    _timeObs = [self.player addPeriodicTimeObserverForInterval:CMTimeMake(1, 1)
+                                                        queue:NULL
+                                                   usingBlock:^(CMTime time) {
+                                                       CMTime endTime = CMTimeConvertScale (blockPlayer.currentItem.asset.duration, blockPlayer.currentTime.timescale, kCMTimeRoundingMethod_RoundHalfAwayFromZero);
+                                                       if (CMTimeCompare(endTime, kCMTimeZero) != 0) {
+                                                           [blockSelf syncScrubber];
+                                                       }
+                                                   }];
+    
+}
+
+-(void)destructPlayer {
+    
+    if (self.player != nil) {
+    
+        //remove observers
+        @try {
+            [self.player removeObserver:self forKeyPath:@"status" context:nil];
+            [self.player removeObserver:self forKeyPath:@"rate" context:nil];
+            [self.player removeObserver:self forKeyPath:@"currentItem.duration" context:nil];
+        }
+        @catch (NSException * __unused exception) {}
+        
+        //remove time and start observers
+        @try {
+            [self.player removeTimeObserver:_startObs];
+            [self.player removeTimeObserver:_timeObs];
+        }
+        @catch (NSException * __unused exception) {}
+        
+        //remove notification observers
+        @try {
+            [[NSNotificationCenter defaultCenter] removeObserver:self forKeyPath:AVPlayerItemDidPlayToEndTimeNotification];
+            [[NSNotificationCenter defaultCenter] removeObserver:self forKeyPath:@"PlaybackStartedNotification"];
+        }
+        @catch (NSException * __unused exception) {}
+        
+        self.player = nil;
+    }
+}
+
+
+-(void)reloadTracks {
+    
+    [self destructPlayer];
+    [self initializePlayer];
+    
+    [self.player stop];
+    [self.player seekToTime:kCMTimeZero];
+    [self.player replaceCurrentItemWithPlayerItem:nil];
+    
+    [self.songTableView reloadData];
+    [self updateViewForPlayerInfo];
+    [self updateViewForPlayerState];
+    [self updateArtworkImage];
 }
 
 
@@ -285,7 +337,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
     }
     
     itemDuration.text = [NSString stringWithFormat:@"%d:%02d", (int)playerDuration / 60, (int)playerDuration % 60, nil];
-	indexLabel.text = [NSString stringWithFormat:@"%lu of %lu", (self.selectedIndex + 1), (unsigned long)[self.dataSource numberOfTracksInPlayer:self]];
+	indexLabel.text = [NSString stringWithFormat:@"%u of %lu", (self.selectedIndex + 1), (unsigned long)[self.dataSource numberOfTracksInPlayer:self]];
     
     self.progressSlider.minimumValue = 0.0f;
 	self.progressSlider.maximumValue = playerDuration;
@@ -306,7 +358,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
 	UAAudioPlayerTableViewCell *cell = (UAAudioPlayerTableViewCell *)[songTableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:index inSection:0]];
 	cell.isSelectedIndex = YES;
     
-    self.title = [NSString stringWithFormat:@"%lu of %lu", self.selectedIndex + 1, (unsigned long)[self.dataSource numberOfTracksInPlayer:self]];
+    self.title = [NSString stringWithFormat:@"%u of %lu", self.selectedIndex + 1, (unsigned long)[self.dataSource numberOfTracksInPlayer:self]];
     
     [self playItemAtIndex:self.selectedIndex];
 	[self updateViewForPlayerInfo];
@@ -380,23 +432,10 @@ static UAAudioPlayerController* _sharedInstance = nil;
     }
 }
 
--(void)reloadTracks {
-    
-    [self.player stop];
-    [self.player seekToTime:kCMTimeZero];
-    [self.player replaceCurrentItemWithPlayerItem:nil];
-    
-    _selectedIndex = 0;
-    [self.songTableView reloadData];
-    [self updateViewForPlayerInfo];
-    [self updateViewForPlayerState];
-    [self updateArtworkImage];
-}
-
 - (void)viewDidLoad {
 	[super viewDidLoad];
 	
-    self.title = [NSString stringWithFormat:@"%lu of %lu", self.selectedIndex + 1, (unsigned long)[self.dataSource numberOfTracksInPlayer:self]];
+    self.title = [NSString stringWithFormat:@"%u of %lu", self.selectedIndex + 1, (unsigned long)[self.dataSource numberOfTracksInPlayer:self]];
     if ([self respondsToSelector:@selector(setNeedsStatusBarAppearanceUpdate)])  [self setNeedsStatusBarAppearanceUpdate];
     if (self.isModal)
         self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
