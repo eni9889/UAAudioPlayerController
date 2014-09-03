@@ -63,6 +63,7 @@
 @interface UAAudioPlayerController ()
 @property (nonatomic, strong) id startObs;
 @property (nonatomic, strong) id timeObs;
+@property (nonatomic, assign) BOOL playerPlayingBeforeScrubbing;
 @end
 
 void interruptionListenerCallback (void *userData, UInt32 interruptionState);
@@ -132,8 +133,17 @@ static UAAudioPlayerController* _sharedInstance = nil;
         
         _selectedIndex = 0;
         
-        [self initializePlayer];
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(playerItemDidReachEnd:)
+                                                     name:AVPlayerItemDidPlayToEndTimeNotification
+                                                   object:nil];
         
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(playerItemDidStartPlaying:)
+                                                     name:@"PlaybackStartedNotification"
+                                                   object:nil];
+        
+        [self initializePlayer];
         [self updateViewForPlayerInfo];
         [self updateViewForPlayerState];
     }
@@ -143,16 +153,6 @@ static UAAudioPlayerController* _sharedInstance = nil;
 -(void)initializePlayer {
     
     self.player = [[UAAVPlayer alloc] init];
-    
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(playerItemDidReachEnd:)
-                                                 name:AVPlayerItemDidPlayToEndTimeNotification
-                                               object:[self.player currentItem]];
-    
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(playerItemDidStartPlaying:)
-                                                 name:@"PlaybackStartedNotification"
-                                               object:[self.player currentItem]];
     
     [self.player addObserver:self forKeyPath:@"status" options:NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew context:nil];
     [self.player addObserver:self forKeyPath:@"rate" options: NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew context:nil];
@@ -207,12 +207,6 @@ static UAAudioPlayerController* _sharedInstance = nil;
         }
         @catch (NSException * __unused exception) {}
         
-        //remove notification observers
-        @try {
-            [[NSNotificationCenter defaultCenter] removeObserver:self forKeyPath:AVPlayerItemDidPlayToEndTimeNotification];
-            [[NSNotificationCenter defaultCenter] removeObserver:self forKeyPath:@"PlaybackStartedNotification"];
-        }
-        @catch (NSException * __unused exception) {}
         
         self.player = nil;
     }
@@ -510,7 +504,12 @@ static UAAudioPlayerController* _sharedInstance = nil;
     
     [progressSlider addTarget:self action:@selector(progressSliderMoved:)
              forControlEvents:UIControlEventValueChanged];
-    progressSlider.maximumValue = self.player.duration;
+    [progressSlider addTarget:self action:@selector(progressSliderTouchEnded:)
+             forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
+    [progressSlider addTarget:self action:@selector(progressSliderTouchStarted:)
+             forControlEvents:UIControlEventTouchDown];
+    
+    progressSlider.maximumValue = self.player.duration ? self.player.duration : 100;
     progressSlider.minimumValue = 0.0;
     
     
@@ -524,6 +523,35 @@ static UAAudioPlayerController* _sharedInstance = nil;
     [self updateViewForPlayerInfo];
 	[self updateViewForPlayerState];
     [self updateArtworkImage];
+}
+
+- (void)volumeSliderMoved:(UISlider *)sender
+{
+	player.volume = [sender value];
+	[[NSUserDefaults standardUserDefaults] setFloat:[sender value] forKey:@"PlayerVolume"];
+}
+
+- (IBAction)progressSliderMoved:(UISlider *)sender
+{
+    NSLog(@"%s: %@", __func__, sender);
+    [self.player seekToTime:CMTimeMake(sender.value, 1)];
+	[self syncScrubber];
+}
+
+-(void)progressSliderTouchEnded:(id)sender {
+    NSLog(@"%s", __func__);
+    if (self.playerPlayingBeforeScrubbing) {
+        self.playerPlayingBeforeScrubbing = NO;
+        [self.player play];
+    }
+}
+
+-(void)progressSliderTouchStarted:(id)sender {
+    NSLog(@"%s", __func__);
+    if (self.player && [self.player playing]) {
+        self.playerPlayingBeforeScrubbing = YES;
+        [self.player pause];
+    }
 }
 
 
@@ -736,6 +764,9 @@ static UAAudioPlayerController* _sharedInstance = nil;
 
 -(void)playItemAtIndex:(NSUInteger)aSelectedIndex {
     
+    self.progressSlider.value = 0.0;
+    self.currentTime.text = @"0:00";
+    
     if([_delegate respondsToSelector:@selector(musicPlayerDidStopPlaying:)]) {
         [_delegate musicPlayerDidStopPlaying:self];
     }
@@ -755,17 +786,6 @@ static UAAudioPlayerController* _sharedInstance = nil;
     [self initNowPlayingInfoForNewTrack];
 }
 
-- (void)volumeSliderMoved:(UISlider *)sender
-{
-	player.volume = [sender value];
-	[[NSUserDefaults standardUserDefaults] setFloat:[sender value] forKey:@"PlayerVolume"];
-}
-
-- (IBAction)progressSliderMoved:(UISlider *)sender
-{
-    [self.player seekToTime:CMTimeMake(sender.value, 1)];
-	[self syncScrubber];
-}
 
 
 #pragma mark -
@@ -1054,6 +1074,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
         switch (self.player.status) {
             case AVPlayerStatusFailed:
                 NSLog(@"AVPlayerStatusFailed");
+                [self next];
                 break;
             case AVPlayerStatusReadyToPlay:
                 NSLog(@"AVPlayerStatusReadyToPlay");
@@ -1061,6 +1082,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
                 break;
             default:
                 NSLog(@"AVPlayerItemStatusUnknown");
+                [self next];
                 break;
         }
         
@@ -1077,7 +1099,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
 }
 
 - (void)playerItemDidReachEnd:(NSNotification *)notification {
-    
+    NSLog(@"%s: %@", __func__, notification);
 	if ([self canGoToNextTrack]) {
         [self next];
     } else if (interrupted) {
