@@ -325,6 +325,8 @@ static UAAudioPlayerController* _sharedInstance = nil;
 
 -(void)updateViewForPlayerInfo
 {
+    if ([self.dataSource numberOfTracksInPlayer:self] <= 0) return;
+    
     float playerDuration = [[self.dataSource audioTrackAtIndex:self.selectedIndex] duration];
     if (self.player.currentItem && !CMTIME_IS_INDEFINITE(self.player.currentItem.duration)) {
         playerDuration = self.player.currentItem.duration.value / self.player.currentItem.duration.timescale;
@@ -677,6 +679,8 @@ static UAAudioPlayerController* _sharedInstance = nil;
 
 - (BOOL)canGoToNextTrack
 {
+    if ([self.dataSource numberOfTracksInPlayer:self] == 0 ) return NO;
+    
     if (repeatOne || repeatAll || shuffle) {
         return YES;
     }
@@ -764,6 +768,8 @@ static UAAudioPlayerController* _sharedInstance = nil;
 
 -(void)playItemAtIndex:(NSUInteger)aSelectedIndex {
     
+    if ([self.dataSource numberOfTracksInPlayer:self] <= 0) return;
+    
     self.progressSlider.value = 0.0;
     self.currentTime.text = @"0:00";
     
@@ -778,8 +784,6 @@ static UAAudioPlayerController* _sharedInstance = nil;
     if([_delegate respondsToSelector:@selector(musicPlayerDidStartPlaying:)]) {
         [_delegate musicPlayerDidStartPlaying:self];
     }
-    
-    [self.songTableView scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:aSelectedIndex inSection:0] atScrollPosition:UITableViewScrollPositionNone animated:YES];
     
     [self updateViewForPlayerInfo];
 	[self updateViewForPlayerState];
@@ -1074,7 +1078,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
         switch (self.player.status) {
             case AVPlayerStatusFailed:
                 NSLog(@"AVPlayerStatusFailed");
-                [self next];
+                if ([self canGoToNextTrack]) [self next];
                 break;
             case AVPlayerStatusReadyToPlay:
                 NSLog(@"AVPlayerStatusReadyToPlay");
@@ -1082,7 +1086,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
                 break;
             default:
                 NSLog(@"AVPlayerItemStatusUnknown");
-                [self next];
+                if ([self canGoToNextTrack]) [self next];
                 break;
         }
         
