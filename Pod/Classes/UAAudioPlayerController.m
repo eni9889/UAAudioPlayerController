@@ -325,7 +325,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
 
 -(void)updateViewForPlayerInfo
 {
-    if ([self.dataSource numberOfTracksInPlayer:self] <= 0) return;
+    if (self.selectedIndex >= [self.dataSource numberOfTracksInPlayer:self]) return;
     
     float playerDuration = [[self.dataSource audioTrackAtIndex:self.selectedIndex] duration];
     if (self.player.currentItem && !CMTIME_IS_INDEFINITE(self.player.currentItem.duration)) {
@@ -340,8 +340,8 @@ static UAAudioPlayerController* _sharedInstance = nil;
 }
 
 - (void) setSelectedIndex:(NSUInteger)index {
-    if ([self.dataSource numberOfTracksInPlayer:self]<=index)
-        return;
+    
+    if (index >= [self.dataSource numberOfTracksInPlayer:self]) return;
     
     _selectedIndex = index;
     
@@ -704,6 +704,8 @@ static UAAudioPlayerController* _sharedInstance = nil;
 
 -(void)play
 {
+    if (self.selectedIndex >= [self.dataSource numberOfTracksInPlayer:self]) return;
+    
     if (self.player.currentItem == nil && [self.dataSource numberOfTracksInPlayer:self] > 0) {
         
         [self playItemAtIndex:self.selectedIndex];
@@ -768,7 +770,7 @@ static UAAudioPlayerController* _sharedInstance = nil;
 
 -(void)playItemAtIndex:(NSUInteger)aSelectedIndex {
     
-    if ([self.dataSource numberOfTracksInPlayer:self] <= 0) return;
+    if (aSelectedIndex >= [self.dataSource numberOfTracksInPlayer:self]) return;
     
     self.progressSlider.value = 0.0;
     self.currentTime.text = @"0:00";
@@ -998,6 +1000,8 @@ static UAAudioPlayerController* _sharedInstance = nil;
 }
 
 -(void)initNowPlayingInfoForNewTrack {
+    
+    if (self.selectedIndex >= [self.dataSource numberOfTracksInPlayer:self]) return;
     
     if ([MPNowPlayingInfoCenter class] && [self.dataSource numberOfTracksInPlayer:self] > 0 ) {
         /* we're on iOS 5, so set up the now playing center */
