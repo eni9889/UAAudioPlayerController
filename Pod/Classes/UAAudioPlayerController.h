@@ -103,5 +103,6 @@
 - (void)toggleRepeat;
 
 - (void)reloadTracks;
+- (void)destructPlayer;
 
 @end

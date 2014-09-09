@@ -153,7 +153,6 @@ static UAAudioPlayerController* _sharedInstance = nil;
 -(void)initializePlayer {
     
     self.player = [[UAAVPlayer alloc] init];
-    
     [self.player addObserver:self forKeyPath:@"status" options:NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew context:nil];
     [self.player addObserver:self forKeyPath:@"rate" options: NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew context:nil];
     [self.player addObserver:self forKeyPath:@"currentItem.duration" options: NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew context:nil];
@@ -239,6 +238,8 @@ static UAAudioPlayerController* _sharedInstance = nil;
 
 - (void)syncScrubber
 {
+    if (self.selectedIndex >= (long)[self.dataSource numberOfTracksInPlayer:self]) return;
+    
     CMTime playerDuration = [self playerItemDuration];
     if (CMTIME_IS_INVALID(playerDuration)) {
         self.progressSlider.minimumValue = 0.0;
@@ -262,6 +263,8 @@ static UAAudioPlayerController* _sharedInstance = nil;
 
 - (void)updateViewForPlayerState
 {
+    if (self.selectedIndex >= (long)[self.dataSource numberOfTracksInPlayer:self]) return;
+    
 	NSString *title = [self.dataSource musicPlayer:self titleForTrack:self.selectedIndex];
 	NSString *artist = [self.dataSource musicPlayer:self artistForTrack:self.selectedIndex];
 	NSString *album = [self.dataSource musicPlayer:self albumForTrack:self.selectedIndex];
@@ -295,6 +298,8 @@ static UAAudioPlayerController* _sharedInstance = nil;
 }
 
 -(void)updateArtworkImage {
+    
+    if (self.selectedIndex >= (long)[self.dataSource numberOfTracksInPlayer:self]) return;
     
     UIImage *placeholderImage = [UIImage imageNamed:@"AudioPlayerNoArtwork"];
     [self.artworkView setImage:placeholderImage];
@@ -1076,6 +1081,10 @@ static UAAudioPlayerController* _sharedInstance = nil;
 #pragma mark - AudioPlayer KVO
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
     NSLog(@"%s: %@ change: %@", __func__, keyPath, change);
+    NSLog(@"Current number of tracks: %ld", (long)[self.dataSource numberOfTracksInPlayer:self]);
+    NSLog(@"Current selected index: %ld", (unsigned long)self.selectedIndex);
+    
+    if (self.selectedIndex >= (long)[self.dataSource numberOfTracksInPlayer:self]) return;
     
     if (object == self.player && [keyPath isEqualToString:@"status"]) {
         
@@ -1097,6 +1106,8 @@ static UAAudioPlayerController* _sharedInstance = nil;
         [self updateViewForPlayerInfo];
 		[self updateViewForPlayerState];
     }
+    
+
 }
 
 -(void)playerItemDidStartPlaying:(NSNotification *)notification {
