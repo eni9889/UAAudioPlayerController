@@ -64,6 +64,7 @@
 @property (nonatomic, strong) id startObs;
 @property (nonatomic, strong) id timeObs;
 @property (nonatomic, assign) BOOL playerPlayingBeforeScrubbing;
+@property (nonatomic, assign) BOOL playerPlayingBeforeInterruption;
 @end
 
 void interruptionListenerCallback (void *userData, UInt32 interruptionState);
@@ -401,14 +402,24 @@ static UAAudioPlayerController* _sharedInstance = nil;
 
 - (void)beginInterruption {
     self.interrupted = YES;
+    
+    if (self.player && [self.player playing]) {
+        self.playerPlayingBeforeInterruption = YES;
+    } else {
+        self.playerPlayingBeforeInterruption = NO;
+    }
     [self.player pause];
+    
 }
 
 - (void)endInterruption {
     self.interrupted = NO;
     if (AVAudioSessionInterruptionOptionShouldResume) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1), dispatch_get_main_queue(), ^{
-            [self.player play];
+            if (self.player && self.playerPlayingBeforeInterruption) {
+                [self.player play];
+            }
+            self.playerPlayingBeforeInterruption = NO;
         });
     }
 }
